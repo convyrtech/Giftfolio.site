@@ -1,14 +1,17 @@
 import { router, createCallerFactory, publicProcedure } from "./trpc";
+import { tradesRouter } from "./routers/trades";
+import { settingsRouter } from "./routers/settings";
+import { giftsRouter } from "./routers/gifts";
+import { statsRouter } from "./routers/stats";
+import { marketRouter } from "./routers/market";
 
 export const appRouter = router({
-  // Health check procedure (also validates tRPC is working)
   health: publicProcedure.query(() => ({ status: "ok" as const })),
-  // Domain routers will be added in Phase 2-4:
-  // trades: tradesRouter,
-  // auth: authRouter,
-  // gifts: giftsRouter,
-  // stats: statsRouter,
-  // market: marketRouter,
+  trades: tradesRouter,
+  settings: settingsRouter,
+  gifts: giftsRouter,
+  stats: statsRouter,
+  market: marketRouter,
 });
 
 export type AppRouter = typeof appRouter;

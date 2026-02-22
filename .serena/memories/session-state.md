@@ -1,42 +1,51 @@
-# Session State — 2026-02-22 14:48
+# Session State — 2026-02-22 14:56
 
 ## Current Task
-Phase 1 audit COMPLETE. All 7 expert reviews done, all fixes applied.
+Phase 2 COMPLETE. Moving to Phase 3 (Auth).
 
-## What Was Done
-1. Created unified checklist: `docs/plans/2026-02-22-unified-checklist.md`
-2. Ran 7 parallel expert reviews (security, CSS, DB, tRPC, Next.js, tests, utils)
-3. Created audit report: `docs/plans/2026-02-22-phase1-audit-results.md`
-4. Fixed all CRITICAL/HIGH/MEDIUM issues:
-   - C1: protectedProcedure ctx spread (src/server/api/trpc.ts)
-   - C2: npm run build added to CI (.github/workflows/ci.yml)
-   - H1: shutdown() idempotency + process.exit(0) (src/server/db/index.ts)
-   - H2: OKX response validation (src/lib/exchange-rates.ts)
-   - M1: drizzle.config.ts env guard
-   - M2: pascalCaseToSpaces acronym fix (src/lib/gift-parser.ts)
-   - M3: Removed unused eslint-plugin-prettier
-   - M4: formatDate/formatDateTime timezone-safe tests
-   - L2: Pool error log sanitization (src/server/db/index.ts)
-   - Added test: NFTCard acronym, formatStars BigInt guard
-5. All 61 tests pass, lint clean, typecheck clean
+## What Was Done (Phase 2)
+1. DB Schema: `src/server/db/schema.ts` — users, userSettings, trades tables with:
+   - All BIGINT columns use `{ mode: "bigint" }`
+   - CHECK constraints (price >= 0, permille 0-1000)
+   - Partial unique index (prevent duplicate open positions)
+   - Activity indexes
+   - pgView trade_profits with .existing()
+2. PnL Engine: `src/lib/pnl-engine.ts` — pure functions:
+   - calculateCommission (Stars flat+permille, TON permille only)
+   - calculateProfit (full P&L with USD)
+   - aggregateStats (dashboard)
+   - 19 tests, all passing
+3. tRPC Routers (5 routers):
+   - trades: list (cursor pagination, server-sort), add, update, softDelete, restore, exportCsv
+   - settings: get, update
+   - gifts: parseUrl
+   - stats: dashboard (timezone-aware, period filter)
+   - market: exchangeRates
+4. VIEW Migration: `drizzle/0001_create_trade_profits_view.sql`
+5. All registered in root.ts
 
-## Modified Files
-- src/server/api/trpc.ts (ctx spread fix)
-- src/server/db/index.ts (shutdown idempotency + error sanitization)
-- src/lib/exchange-rates.ts (OKX validation)
-- src/lib/gift-parser.ts (pascalCaseToSpaces acronym)
-- drizzle.config.ts (env guard)
-- .github/workflows/ci.yml (build step)
-- src/lib/__tests__/formatters.test.ts (timezone-safe)
-- src/lib/__tests__/gift-parser.test.ts (acronym test)
-- src/lib/__tests__/currencies.test.ts (BigInt guard test)
-- package.json (removed eslint-plugin-prettier)
-- docs/plans/2026-02-22-phase1-audit-results.md (NEW)
+## Verification
+- 80/80 tests pass
+- Lint clean
+- Typecheck clean
+- Build successful
+
+## New Files
+- src/server/db/schema.ts (full schema)
+- src/lib/pnl-engine.ts
+- src/lib/__tests__/pnl-engine.test.ts
+- src/server/api/routers/trades.ts
+- src/server/api/routers/settings.ts
+- src/server/api/routers/gifts.ts
+- src/server/api/routers/stats.ts
+- src/server/api/routers/market.ts
+- drizzle/0001_create_trade_profits_view.sql
+- src/server/api/root.ts (updated)
 
 ## Next Steps
-- Phase 2 implementation (DB schema, auth, tRPC routers)
-- User needs to approve moving forward
+- Phase 3: Authentication (Better Auth + Telegram plugin)
+- NOT committed yet — waiting for user approval
 
 ## Git State
-- No commits made yet for these changes
-- All changes are unstaged
+- Last commit: ae45ffd (Phase 1)
+- Phase 2 changes: unstaged
