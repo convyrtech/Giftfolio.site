@@ -12,7 +12,7 @@ export const statsRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const userId = BigInt(ctx.user.id);
+      const userId = ctx.user.id;
 
       // Get user timezone for date filtering
       const [settings] = await ctx.db
@@ -33,18 +33,13 @@ export const statsRouter = router({
 
       // Period filter on sell_date (completed trades only for PnL)
       if (input.period !== "total") {
-        const interval =
-          input.period === "day"
-            ? "1 day"
-            : input.period === "week"
-              ? "7 days"
-              : "30 days";
+        const days = input.period === "day" ? 1 : input.period === "week" ? 7 : 30;
 
         conditions.push(isNotNull(trades.sellDate));
         conditions.push(
           gte(
             trades.sellDate,
-            sql`(CURRENT_DATE AT TIME ZONE ${tz} - INTERVAL '${sql.raw(interval)}')::date`,
+            sql`(CURRENT_DATE AT TIME ZONE ${tz} - make_interval(days => ${days}))::date`,
           ),
         );
       }

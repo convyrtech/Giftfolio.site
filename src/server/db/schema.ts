@@ -6,6 +6,7 @@ import {
   bigserial,
   text,
   smallint,
+  boolean,
   date,
   numeric,
   timestamp,
@@ -22,23 +23,87 @@ export type TradeCurrency = (typeof tradeCurrencies)[number];
 const marketplaces = ["fragment", "getgems", "tonkeeper", "p2p", "other"] as const;
 export type Marketplace = (typeof marketplaces)[number];
 
-// ─── Users ───
+// ─── Users (Better Auth managed + custom fields) ───
 
 export const users = pgTable("users", {
-  id: bigserial({ mode: "bigint" }).primaryKey(),
-  telegramId: bigint("telegram_id", { mode: "bigint" }).notNull().unique(),
+  id: text().primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text(),
+  email: text(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  image: text(),
+  // Telegram-specific fields (text for Better Auth adapter compatibility)
+  telegramId: text("telegram_id").unique(),
   username: text(),
-  firstName: text("first_name"),
-  photoUrl: text("photo_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// ─── Sessions (Better Auth managed) ───
+
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: text().primaryKey(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    token: text().notNull().unique(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (table) => [index("sessions_user_id_idx").on(table.userId)],
+);
+
+// ─── Accounts (Better Auth managed) ───
+
+export const accounts = pgTable(
+  "accounts",
+  {
+    id: text().primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true }),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }),
+    scope: text(),
+    password: text(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("accounts_user_id_idx").on(table.userId),
+    uniqueIndex("accounts_provider_account_idx").on(table.providerId, table.accountId),
+  ],
+);
+
+// ─── Verifications (Better Auth managed) ───
+
+export const verifications = pgTable(
+  "verifications",
+  {
+    id: text().primaryKey(),
+    identifier: text().notNull(),
+    value: text().notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("verifications_identifier_idx").on(table.identifier)],
+);
 
 // ─── User Settings ───
 
 export const userSettings = pgTable("user_settings", {
   id: bigserial({ mode: "bigint" }).primaryKey(),
-  userId: bigint("user_id", { mode: "bigint" })
+  userId: text("user_id")
     .notNull()
     .unique()
     .references(() => users.id, { onDelete: "cascade" }),
@@ -56,7 +121,7 @@ export const trades = pgTable(
   "trades",
   {
     id: bigserial({ mode: "bigint" }).primaryKey(),
-    userId: bigint("user_id", { mode: "bigint" })
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
 
@@ -115,7 +180,6 @@ export const trades = pgTable(
       .where(sql`${table.deletedAt} IS NULL`),
     // Gift slug lookup
     index("idx_trades_gift_slug").on(table.userId, table.giftSlug),
-    // Currency check: Stars trades must have Stars-range prices (positive)
     check("chk_buy_price_positive", sql`${table.buyPrice} >= 0`),
     check(
       "chk_sell_price_positive",
@@ -133,12 +197,10 @@ export const trades = pgTable(
 );
 
 // ─── VIEW: trade_profits ───
-// Managed via custom migration (CREATE OR REPLACE VIEW), NOT by drizzle-kit
-// .existing() tells drizzle-kit to skip this in migrations
 
 export const tradeProfits = pgView("trade_profits", {
   id: bigint({ mode: "bigint" }),
-  userId: bigint("user_id", { mode: "bigint" }),
+  userId: text("user_id"),
   giftSlug: text("gift_slug"),
   giftName: text("gift_name"),
   giftNumber: bigint("gift_number", { mode: "bigint" }),

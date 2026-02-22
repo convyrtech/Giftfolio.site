@@ -24,6 +24,17 @@
 - Order: react → next → external libs → internal → types → styles
 - NEVER use barrel exports (index.ts re-exports) — direct imports only
 
+## Bug Fix Protocol
+When fixing a bug, ALWAYS search the entire codebase for the same pattern before closing:
+- `Record<string, unknown>` in Drizzle `.set()` → use `Partial<TableType>`
+- `throw new Error(...)` in tRPC routers → use `TRPCError` with proper code
+- `sql.raw(...)` → replace with parameterized `sql` template
+- `process.env.X` in server code → use `env.X` from `@/env` (validated)
+- Manual cookie/session handling → use framework's official API
+- `z.string()` for constrained values → add `.regex()`, `.refine()`, or `.int()/.positive()`
+- Untyped adapter results (`as unknown`) → type-assert to specific interface
+- Missing unique indexes on columns with `.unique()` → add explicit `uniqueIndex()` in table callback
+
 ## Styling
 - Tailwind classes only — NEVER inline styles or CSS modules
 - Use `cn()` utility for conditional classes

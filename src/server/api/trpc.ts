@@ -3,16 +3,19 @@ import superjson from "superjson";
 import { cache } from "react";
 import { headers } from "next/headers";
 import { db } from "@/server/db";
+import { auth } from "@/server/auth";
 
 export const createTRPCContext = cache(async () => {
   const headersList = await headers();
 
-  // Auth session will be added in Phase 3
-  // For now, return db and headers
+  const session = await auth.api.getSession({
+    headers: headersList,
+  });
+
   return {
     db,
     headers: headersList,
-    session: null as { user: { id: string } } | null,
+    session,
   };
 });
 

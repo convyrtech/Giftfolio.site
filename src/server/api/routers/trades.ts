@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { and, eq, isNull, desc, asc, lt, gt } from "drizzle-orm";
 import { router, protectedProcedure } from "../trpc";
-import { trades, userSettings } from "@/server/db/schema";
+import { trades, type Trade, userSettings } from "@/server/db/schema";
 import { parseGiftUrl, getGiftTelegramUrl } from "@/lib/gift-parser";
 import { getTonUsdRate, getStarsUsdRate } from "@/lib/exchange-rates";
 
@@ -41,7 +42,7 @@ export const tradesRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const userId = BigInt(ctx.user.id);
+      const userId = ctx.user.id;
       const { cursor, limit, sort, sortDir, currency, showDeleted } = input;
 
       const conditions = [eq(trades.userId, userId)];
@@ -79,7 +80,7 @@ export const tradesRouter = router({
   getById: protectedProcedure
     .input(z.object({ id: z.coerce.bigint() }))
     .query(async ({ ctx, input }) => {
-      const userId = BigInt(ctx.user.id);
+      const userId = ctx.user.id;
 
       const [trade] = await ctx.db
         .select()
@@ -90,12 +91,12 @@ export const tradesRouter = router({
     }),
 
   add: protectedProcedure.input(tradeInput).mutation(async ({ ctx, input }) => {
-    const userId = BigInt(ctx.user.id);
+    const userId = ctx.user.id;
 
     // Parse gift URL
     const parsed = parseGiftUrl(input.giftUrl);
     if (!parsed) {
-      throw new Error("Invalid gift URL format");
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid gift URL format" });
     }
 
     // Lock commission from user settings (or use override)
@@ -176,7 +177,7 @@ export const tradesRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const userId = BigInt(ctx.user.id);
+      const userId = ctx.user.id;
 
       // Get existing trade to check ownership and get currency
       const [existing] = await ctx.db
@@ -185,10 +186,10 @@ export const tradesRouter = router({
         .where(and(eq(trades.id, input.id), eq(trades.userId, userId)));
 
       if (!existing) {
-        throw new Error("Trade not found");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Trade not found" });
       }
 
-      const updateData: Record<string, unknown> = {
+      const updateData: Partial<Trade> = {
         updatedAt: new Date(),
       };
 
@@ -231,7 +232,7 @@ export const tradesRouter = router({
   softDelete: protectedProcedure
     .input(z.object({ id: z.coerce.bigint() }))
     .mutation(async ({ ctx, input }) => {
-      const userId = BigInt(ctx.user.id);
+      const userId = ctx.user.id;
 
       const [updated] = await ctx.db
         .update(trades)
@@ -246,7 +247,7 @@ export const tradesRouter = router({
         .returning();
 
       if (!updated) {
-        throw new Error("Trade not found or already deleted");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Trade not found or already deleted" });
       }
 
       return { success: true };
@@ -255,7 +256,7 @@ export const tradesRouter = router({
   restore: protectedProcedure
     .input(z.object({ id: z.coerce.bigint() }))
     .mutation(async ({ ctx, input }) => {
-      const userId = BigInt(ctx.user.id);
+      const userId = ctx.user.id;
 
       const [updated] = await ctx.db
         .update(trades)
@@ -267,7 +268,7 @@ export const tradesRouter = router({
         .returning();
 
       if (!updated) {
-        throw new Error("Trade not found");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Trade not found" });
       }
 
       return { success: true };
@@ -280,7 +281,7 @@ export const tradesRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const userId = BigInt(ctx.user.id);
+      const userId = ctx.user.id;
 
       const conditions = [eq(trades.userId, userId), isNull(trades.deletedAt)];
 

@@ -1,20 +1,32 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { router, protectedProcedure } from "../trpc";
-import { userSettings } from "@/server/db/schema";
+import { userSettings, type UserSetting } from "@/server/db/schema";
+
+const ianaTimezone = z.string().refine(
+  (tz) => {
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone: tz });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  { message: "Invalid IANA timezone" },
+);
 
 export const settingsRouter = router({
   get: protectedProcedure.query(async ({ ctx }) => {
     const [settings] = await ctx.db
       .select()
       .from(userSettings)
-      .where(eq(userSettings.userId, BigInt(ctx.user.id)));
+      .where(eq(userSettings.userId, ctx.user.id));
 
     if (!settings) {
       // Create default settings if missing (shouldn't happen after auth setup)
       const [created] = await ctx.db
         .insert(userSettings)
-        .values({ userId: BigInt(ctx.user.id) })
+        .values({ userId: ctx.user.id })
         .returning();
       return created!;
     }
@@ -28,13 +40,13 @@ export const settingsRouter = router({
         defaultCommissionStars: z.coerce.bigint().min(0n).optional(),
         defaultCommissionPermille: z.number().int().min(0).max(1000).optional(),
         defaultCurrency: z.enum(["STARS", "TON"]).optional(),
-        timezone: z.string().min(1).max(100).optional(),
+        timezone: ianaTimezone.optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const userId = BigInt(ctx.user.id);
+      const userId = ctx.user.id;
 
-      const updateData: Record<string, unknown> = {};
+      const updateData: Partial<UserSetting> = {};
       if (input.defaultCommissionStars !== undefined) {
         updateData.defaultCommissionStars = input.defaultCommissionStars;
       }
