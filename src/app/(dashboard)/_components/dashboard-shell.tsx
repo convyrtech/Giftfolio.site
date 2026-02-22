@@ -81,15 +81,15 @@ export function DashboardShell({ user, children }: DashboardShellProps): React.R
         {children}
       </main>
 
-      {/* Mobile bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card md:hidden">
+      {/* Mobile bottom nav — safe-area for iPhone notch */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
         <div className="flex h-14 items-center justify-around">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-0.5 px-4 py-2 text-xs",
+                "flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-0.5 px-4 text-xs",
                 pathname.startsWith(item.href)
                   ? "text-primary"
                   : "text-muted-foreground",

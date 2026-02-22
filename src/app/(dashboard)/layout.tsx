@@ -1,7 +1,15 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/server/auth";
 import { DashboardShell } from "./_components/dashboard-shell";
+
+export const metadata: Metadata = {
+  title: {
+    template: "%s — Giftfolio",
+    default: "Giftfolio",
+  },
+};
 
 export default async function DashboardLayout({
   children,

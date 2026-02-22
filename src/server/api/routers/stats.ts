@@ -2,6 +2,7 @@ import { z } from "zod";
 import { and, eq, isNull, isNotNull, gte, sql } from "drizzle-orm";
 import { router, protectedProcedure } from "../trpc";
 import { trades, userSettings } from "@/server/db/schema";
+import { getFloorPrices } from "@/lib/floor-prices";
 
 export const statsRouter = router({
   dashboard: protectedProcedure
@@ -83,4 +84,49 @@ export const statsRouter = router({
         };
       });
     }),
+
+  portfolioValue: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.user.id;
+
+    // Get gift names of open positions (not sold, not deleted)
+    const openPositions = await ctx.db
+      .select({ giftName: trades.giftName })
+      .from(trades)
+      .where(
+        and(
+          eq(trades.userId, userId),
+          isNull(trades.sellDate),
+          isNull(trades.deletedAt),
+        ),
+      );
+
+    if (openPositions.length === 0) {
+      return { totalStars: 0, positions: 0, available: false };
+    }
+
+    const floorPrices = await getFloorPrices();
+    const hasFloorData = Object.keys(floorPrices).length > 0;
+
+    if (!hasFloorData) {
+      return { totalStars: 0, positions: openPositions.length, available: false };
+    }
+
+    let totalStars = 0;
+    let matched = 0;
+
+    for (const pos of openPositions) {
+      const floor = floorPrices[pos.giftName];
+      if (floor) {
+        totalStars += floor;
+        matched++;
+      }
+    }
+
+    return {
+      totalStars,
+      positions: openPositions.length,
+      matched,
+      available: true,
+    };
+  }),
 });

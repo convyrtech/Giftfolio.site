@@ -15,6 +15,9 @@ export function SummaryCards(): React.ReactElement {
   const [period, setPeriod] = useState<Period>("total");
 
   const { data, isLoading } = trpc.stats.dashboard.useQuery({ period });
+  const { data: portfolio } = trpc.stats.portfolioValue.useQuery(undefined, {
+    staleTime: 60 * 60 * 1000, // 1h — matches server cache TTL
+  });
 
   if (isLoading) return <SummaryCardsSkeleton />;
   if (!data || data.length === 0) return <></>;
@@ -69,10 +72,17 @@ export function SummaryCards(): React.ReactElement {
           title="Total Trades"
           value={formatNumber(totalTrades)}
         />
-        <StatCard
-          title="Open Positions"
-          value={formatNumber(openTrades)}
-        />
+        {openTrades > 0 && portfolio?.available ? (
+          <StatCard
+            title="Portfolio Value"
+            value={formatStars(BigInt(portfolio.totalStars) as Stars)}
+          />
+        ) : (
+          <StatCard
+            title="Open Positions"
+            value={formatNumber(openTrades)}
+          />
+        )}
       </div>
     </div>
   );
