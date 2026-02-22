@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate } from "@/lib/formatters";
 import { formatStars, formatTon, type Stars, type NanoTon } from "@/lib/currencies";
+import { calculateProfit } from "@/lib/pnl-engine";
 import { getGiftImageUrl } from "@/lib/gift-parser";
 import type { Trade } from "@/server/db/schema";
 import { TradeRowActions } from "./trade-row-actions";
@@ -18,29 +19,21 @@ function formatPrice(price: bigint, currency: "STARS" | "TON"): string {
 }
 
 /**
- * Compute profit client-side from trade row data.
- * Stars: (sell - buy - flat - ROUND(sell * permille / 1000)) * quantity
- * TON: (sell - buy - ROUND(sell * permille / 1000)) * quantity (no flat)
- * Uses integer rounding: (a + 500) / 1000 for ROUND behavior.
+ * Compute profit client-side using the canonical pnl-engine (single source of truth).
  */
 function computeProfit(trade: Trade): { value: bigint; percent: number | null } | null {
-  if (trade.sellPrice === null) return null;
-  const buy = trade.buyPrice;
-  const sell = trade.sellPrice;
-  const qty = BigInt(trade.quantity);
-
-  let unitCommission = 0n;
-  if (trade.tradeCurrency === "STARS") {
-    unitCommission += trade.commissionFlatStars;
-  }
-  // Round: (sell * permille + 500) / 1000
-  unitCommission += (sell * BigInt(trade.commissionPermille) + 500n) / 1000n;
-
-  const unitProfit = sell - buy - unitCommission;
-  const totalProfit = unitProfit * qty;
-  const percent = buy > 0n ? Number((unitProfit * 10000n) / buy) / 100 : null;
-
-  return { value: totalProfit, percent };
+  const result = calculateProfit({
+    tradeCurrency: trade.tradeCurrency,
+    buyPrice: trade.buyPrice,
+    sellPrice: trade.sellPrice,
+    commissionFlatStars: trade.commissionFlatStars,
+    commissionPermille: trade.commissionPermille,
+    buyRateUsd: trade.buyRateUsd,
+    sellRateUsd: trade.sellRateUsd,
+    quantity: trade.quantity,
+  });
+  if (result.netProfit === null) return null;
+  return { value: result.netProfit, percent: result.profitPercent };
 }
 
 export const columns: ColumnDef<Trade>[] = [

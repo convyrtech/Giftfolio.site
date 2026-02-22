@@ -239,9 +239,11 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Mode toggle (add only) */}
       {!isEdit && (
-        <div className="flex gap-1 rounded-md border p-1">
+        <div className="flex gap-1 rounded-md border p-1" role="radiogroup" aria-label="Trade mode">
           <button
             type="button"
+            role="radio"
+            aria-checked={mode === "item"}
             className={cn(
               "flex-1 rounded px-3 py-1 text-sm font-medium transition-colors",
               mode === "item" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
@@ -252,6 +254,8 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
           </button>
           <button
             type="button"
+            role="radio"
+            aria-checked={mode === "collection"}
             className={cn(
               "flex-1 rounded px-3 py-1 text-sm font-medium transition-colors",
               mode === "collection" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
@@ -430,6 +434,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
       <div className="space-y-2">
         <button
           type="button"
+          aria-expanded={showCommission}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
           onClick={() => setShowCommission(!showCommission)}
         >

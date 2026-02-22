@@ -25,7 +25,8 @@ export const statsRouter = router({
       }
 
       // Period filter on sell_date (completed trades only for PnL)
-      const pnlConditions = [...baseConditions, isNotNull(trades.sellDate)];
+      // Exclude trades marked as "don't count" from PnL calculations
+      const pnlConditions = [...baseConditions, isNotNull(trades.sellDate), eq(trades.excludeFromPnl, false)];
       if (input.period !== "total") {
         // Only fetch timezone when needed for date filtering
         const [settings] = await ctx.db

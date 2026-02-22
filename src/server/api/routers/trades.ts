@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { and, eq, isNull, desc, asc, lt, gt, inArray } from "drizzle-orm";
+import { and, eq, isNull, desc, asc, lt, gt, inArray, sql } from "drizzle-orm";
 import { router, protectedProcedure } from "../trpc";
 import { trades, type Trade, userSettings } from "@/server/db/schema";
 import { parseGiftUrl, getGiftTelegramUrl } from "@/lib/gift-parser";
@@ -123,7 +123,7 @@ export const tradesRouter = router({
     } else if (input.giftName) {
       // Collection mode: generate synthetic slug
       giftName = input.giftName;
-      giftSlug = `${giftName}-batch-${Date.now()}`;
+      giftSlug = `${giftName}-batch-${crypto.randomUUID()}`;
       giftLink = null;
       giftNumber = null;
     } else {
@@ -343,8 +343,32 @@ export const tradesRouter = router({
 
       if (fields.sellDate !== undefined) {
         updateData.sellDate = fields.sellDate;
-        // Lock sell rate — use Stars rate as best-effort (individual rate lock not possible for bulk)
-        updateData.sellRateUsd = getStarsUsdRate().toString();
+      }
+
+      // If setting sellDate, split by currency for correct rate locking
+      if (fields.sellDate !== undefined) {
+        const starsRate = getStarsUsdRate().toString();
+        const tonRate = (await getTonUsdRate())?.toString() ?? null;
+
+        const baseWhere = and(
+          inArray(trades.id, ids),
+          eq(trades.userId, userId),
+          isNull(trades.deletedAt),
+        );
+
+        const starsUpdated = await ctx.db
+          .update(trades)
+          .set({ ...updateData, sellRateUsd: starsRate })
+          .where(and(baseWhere, eq(trades.tradeCurrency, "STARS")))
+          .returning({ id: trades.id });
+
+        const tonUpdated = await ctx.db
+          .update(trades)
+          .set({ ...updateData, sellRateUsd: tonRate })
+          .where(and(baseWhere, eq(trades.tradeCurrency, "TON")))
+          .returning({ id: trades.id });
+
+        return { count: starsUpdated.length + tonUpdated.length };
       }
 
       const updated = await ctx.db
@@ -387,22 +411,21 @@ export const tradesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
 
-      const [existing] = await ctx.db
-        .select({ isHidden: trades.isHidden })
-        .from(trades)
-        .where(and(eq(trades.id, input.id), eq(trades.userId, userId)));
-
-      if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Trade not found" });
-      }
-
+      // Atomic toggle using SQL NOT to avoid TOCTOU race
       const [updated] = await ctx.db
         .update(trades)
-        .set({ isHidden: !existing.isHidden, updatedAt: new Date() })
+        .set({
+          isHidden: sql`NOT ${trades.isHidden}`,
+          updatedAt: new Date(),
+        })
         .where(and(eq(trades.id, input.id), eq(trades.userId, userId)))
         .returning();
 
-      return updated!;
+      if (!updated) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Trade not found" });
+      }
+
+      return updated;
     }),
 
   exportCsv: protectedProcedure

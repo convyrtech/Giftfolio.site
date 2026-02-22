@@ -56,7 +56,7 @@ export function TradesToolbar({
         </Button>
 
         <Select value={currency} onValueChange={(v) => onCurrencyChange(v as CurrencyFilter)}>
-          <SelectTrigger className="w-28">
+          <SelectTrigger className="w-28" aria-label="Filter by currency">
             <SelectValue placeholder="Currency" />
           </SelectTrigger>
           <SelectContent>
@@ -67,7 +67,7 @@ export function TradesToolbar({
         </Select>
 
         <Select value={sort} onValueChange={(v) => onSortChange(v as SortColumn)}>
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-32" aria-label="Sort by column">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>
@@ -80,7 +80,7 @@ export function TradesToolbar({
         </Select>
 
         <Select value={sortDir} onValueChange={(v) => onSortDirChange(v as SortDir)}>
-          <SelectTrigger className="w-28">
+          <SelectTrigger className="w-28" aria-label="Sort direction">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -95,6 +95,8 @@ export function TradesToolbar({
               variant={showHidden ? "secondary" : "outline"}
               size="sm"
               onClick={() => onShowHiddenChange(!showHidden)}
+              aria-label={showHidden ? "Hide hidden trades" : "Show hidden trades"}
+              aria-pressed={showHidden}
             >
               {showHidden ? (
                 <Eye className="h-4 w-4" />

@@ -34,9 +34,9 @@ export function BulkActionsBar({
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur supports-[backdrop-filter]:bg-background/60" role="region" aria-label="Bulk actions">
       <div className="mx-auto flex max-w-4xl items-center gap-2">
-        <span className="shrink-0 text-sm font-medium">{count} selected</span>
+        <span className="shrink-0 text-sm font-medium" role="status" aria-live="polite" aria-atomic="true">{count} selected</span>
         <Button variant="ghost" size="sm" onClick={onClearSelection}>
           <X className="mr-1 h-3 w-3" />
           Clear
@@ -87,6 +87,7 @@ function SetSellPriceAction({
         <div className="space-y-2">
           <Input
             placeholder="Sell price"
+            aria-label="Sell price for selected trades"
             type="text"
             inputMode="numeric"
             value={price}
