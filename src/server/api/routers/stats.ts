@@ -15,14 +15,6 @@ export const statsRouter = router({
     .query(async ({ ctx, input }) => {
       const userId = ctx.user.id;
 
-      // Get user timezone for date filtering
-      const [settings] = await ctx.db
-        .select({ timezone: userSettings.timezone })
-        .from(userSettings)
-        .where(eq(userSettings.userId, userId));
-
-      const tz = settings?.timezone ?? "UTC";
-
       const baseConditions = [
         eq(trades.userId, userId),
         isNull(trades.deletedAt),
@@ -35,6 +27,13 @@ export const statsRouter = router({
       // Period filter on sell_date (completed trades only for PnL)
       const pnlConditions = [...baseConditions, isNotNull(trades.sellDate)];
       if (input.period !== "total") {
+        // Only fetch timezone when needed for date filtering
+        const [settings] = await ctx.db
+          .select({ timezone: userSettings.timezone })
+          .from(userSettings)
+          .where(eq(userSettings.userId, userId));
+        const tz = settings?.timezone ?? "UTC";
+
         const days = input.period === "day" ? 1 : input.period === "week" ? 7 : 30;
         pnlConditions.push(
           gte(
@@ -52,7 +51,7 @@ export const statsRouter = router({
           totalBuy: sql<bigint>`coalesce(sum(${trades.buyPrice}), 0)`.mapWith(BigInt),
           totalSell: sql<bigint>`coalesce(sum(${trades.sellPrice}), 0)`.mapWith(BigInt),
           totalCommissionFlat: sql<bigint>`coalesce(sum(${trades.commissionFlatStars}), 0)`.mapWith(BigInt),
-          totalPermilleCommission: sql<bigint>`coalesce(sum(${trades.sellPrice} * ${trades.commissionPermille} / 1000), 0)`.mapWith(BigInt),
+          totalPermilleCommission: sql<bigint>`coalesce(sum(ROUND(${trades.sellPrice} * ${trades.commissionPermille} / 1000.0)), 0)`.mapWith(BigInt),
         })
         .from(trades)
         .where(and(...pnlConditions))
@@ -88,9 +87,13 @@ export const statsRouter = router({
   portfolioValue: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.user.id;
 
-    // Get gift names of open positions (not sold, not deleted)
-    const openPositions = await ctx.db
-      .select({ giftName: trades.giftName })
+    // Group open positions by gift name with count to reduce data transfer.
+    // Each trade row = exactly one gift unit (enforced by unique index).
+    const openGroups = await ctx.db
+      .select({
+        giftName: trades.giftName,
+        count: sql<number>`count(*)::int`.mapWith(Number),
+      })
       .from(trades)
       .where(
         and(
@@ -98,9 +101,12 @@ export const statsRouter = router({
           isNull(trades.sellDate),
           isNull(trades.deletedAt),
         ),
-      );
+      )
+      .groupBy(trades.giftName);
 
-    if (openPositions.length === 0) {
+    const totalPositions = openGroups.reduce((sum, g) => sum + g.count, 0);
+
+    if (openGroups.length === 0) {
       return { totalStars: 0, positions: 0, available: false };
     }
 
@@ -108,23 +114,23 @@ export const statsRouter = router({
     const hasFloorData = Object.keys(floorPrices).length > 0;
 
     if (!hasFloorData) {
-      return { totalStars: 0, positions: openPositions.length, available: false };
+      return { totalStars: 0, positions: totalPositions, available: false };
     }
 
     let totalStars = 0;
     let matched = 0;
 
-    for (const pos of openPositions) {
-      const floor = floorPrices[pos.giftName];
-      if (floor) {
-        totalStars += floor;
-        matched++;
+    for (const group of openGroups) {
+      const floor = floorPrices[group.giftName];
+      if (floor !== undefined) {
+        totalStars += floor * group.count;
+        matched += group.count;
       }
     }
 
     return {
       totalStars,
-      positions: openPositions.length,
+      positions: totalPositions,
       matched,
       available: true,
     };
