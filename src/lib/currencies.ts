@@ -54,17 +54,20 @@ export function parseTonInput(input: string): NanoTon {
 /**
  * Format NanoTon bigint to human-readable string.
  * "3.50 TON" — dot decimal (crypto convention)
+ * Handles negative values correctly (for profit display).
  */
 export function formatTon(nanotons: NanoTon): string {
-  const whole = nanotons / NANOTON_MULTIPLIER;
-  const frac = nanotons % NANOTON_MULTIPLIER;
+  const sign = nanotons < 0n ? "-" : "";
+  const abs = nanotons < 0n ? -nanotons : nanotons;
+  const whole = abs / NANOTON_MULTIPLIER;
+  const frac = abs % NANOTON_MULTIPLIER;
 
   // Remove trailing zeros, keep at least 2 decimal places
   let fracStr = frac.toString().padStart(NANOTON_DECIMALS, "0");
   fracStr = fracStr.replace(/0+$/, "");
   if (fracStr.length < 2) fracStr = fracStr.padEnd(2, "0");
 
-  return `${whole}.${fracStr} TON`;
+  return `${sign}${whole}.${fracStr} TON`;
 }
 
 /**
@@ -98,12 +101,15 @@ export function formatStars(stars: Stars): string {
 
 /**
  * Format NanoTon to raw TON number string (for calculations/display without suffix).
+ * Handles negative values correctly.
  */
 export function nanoTonToTonString(nanotons: NanoTon): string {
-  const whole = nanotons / NANOTON_MULTIPLIER;
-  const frac = nanotons % NANOTON_MULTIPLIER;
+  const sign = nanotons < 0n ? "-" : "";
+  const abs = nanotons < 0n ? -nanotons : nanotons;
+  const whole = abs / NANOTON_MULTIPLIER;
+  const frac = abs % NANOTON_MULTIPLIER;
   let fracStr = frac.toString().padStart(NANOTON_DECIMALS, "0");
   fracStr = fracStr.replace(/0+$/, "");
-  if (fracStr.length === 0) return whole.toString();
-  return `${whole}.${fracStr}`;
+  if (fracStr.length === 0) return `${sign}${whole}`;
+  return `${sign}${whole}.${fracStr}`;
 }

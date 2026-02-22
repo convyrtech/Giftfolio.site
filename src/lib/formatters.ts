@@ -1,16 +1,19 @@
 /**
  * Format date to DD.MM.YY (Russian standard).
+ * Uses UTC to prevent off-by-one-day for Drizzle date fields (midnight UTC).
  */
 export function formatDate(date: Date | string): string {
   return new Intl.DateTimeFormat("ru-RU", {
     day: "2-digit",
     month: "2-digit",
     year: "2-digit",
+    timeZone: "UTC",
   }).format(new Date(date));
 }
 
 /**
  * Format date to DD.MM.YY HH:mm (Russian standard with time).
+ * Uses UTC for date-only fields.
  */
 export function formatDateTime(date: Date | string): string {
   return new Intl.DateTimeFormat("ru-RU", {
@@ -19,6 +22,7 @@ export function formatDateTime(date: Date | string): string {
     year: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "UTC",
   }).format(new Date(date));
 }
 

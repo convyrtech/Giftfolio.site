@@ -7,6 +7,7 @@ import * as schema from "@/server/db/schema";
 import { telegramPlugin } from "./telegram-plugin";
 
 export const auth = betterAuth({
+  baseURL: env.NEXT_PUBLIC_APP_URL,
   database: drizzleAdapter(db, {
     provider: "pg",
     schema,

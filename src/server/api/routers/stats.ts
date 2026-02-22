@@ -22,21 +22,20 @@ export const statsRouter = router({
 
       const tz = settings?.timezone ?? "UTC";
 
-      const conditions = [
+      const baseConditions = [
         eq(trades.userId, userId),
         isNull(trades.deletedAt),
       ];
 
       if (input.currency) {
-        conditions.push(eq(trades.tradeCurrency, input.currency));
+        baseConditions.push(eq(trades.tradeCurrency, input.currency));
       }
 
       // Period filter on sell_date (completed trades only for PnL)
+      const pnlConditions = [...baseConditions, isNotNull(trades.sellDate)];
       if (input.period !== "total") {
         const days = input.period === "day" ? 1 : input.period === "week" ? 7 : 30;
-
-        conditions.push(isNotNull(trades.sellDate));
-        conditions.push(
+        pnlConditions.push(
           gte(
             trades.sellDate,
             sql`(CURRENT_DATE AT TIME ZONE ${tz} - make_interval(days => ${days}))::date`,
@@ -44,21 +43,44 @@ export const statsRouter = router({
         );
       }
 
-      // Aggregate stats in a single query per currency
-      const result = await ctx.db
+      // PnL stats — only closed trades (with sellDate)
+      const pnlResult = await ctx.db
         .select({
           tradeCurrency: trades.tradeCurrency,
-          totalTrades: sql<number>`count(*)::int`,
-          closedTrades: sql<number>`count(${trades.sellDate})::int`,
+          closedTrades: sql<number>`count(*)::int`.mapWith(Number),
           totalBuy: sql<bigint>`coalesce(sum(${trades.buyPrice}), 0)`.mapWith(BigInt),
           totalSell: sql<bigint>`coalesce(sum(${trades.sellPrice}), 0)`.mapWith(BigInt),
           totalCommissionFlat: sql<bigint>`coalesce(sum(${trades.commissionFlatStars}), 0)`.mapWith(BigInt),
-          avgPermille: sql<number>`coalesce(avg(${trades.commissionPermille}), 0)::int`,
+          totalPermilleCommission: sql<bigint>`coalesce(sum(${trades.sellPrice} * ${trades.commissionPermille} / 1000), 0)`.mapWith(BigInt),
         })
         .from(trades)
-        .where(and(...conditions))
+        .where(and(...pnlConditions))
         .groupBy(trades.tradeCurrency);
 
-      return result;
+      // Total trade count + open positions — always unfiltered by period
+      const countResult = await ctx.db
+        .select({
+          tradeCurrency: trades.tradeCurrency,
+          totalTrades: sql<number>`count(*)::int`.mapWith(Number),
+          openTrades: sql<number>`count(*) filter (where ${trades.sellDate} is null)::int`.mapWith(Number),
+        })
+        .from(trades)
+        .where(and(...baseConditions))
+        .groupBy(trades.tradeCurrency);
+
+      // Merge results
+      return countResult.map((c) => {
+        const pnl = pnlResult.find((p) => p.tradeCurrency === c.tradeCurrency);
+        return {
+          tradeCurrency: c.tradeCurrency,
+          totalTrades: c.totalTrades,
+          openTrades: c.openTrades,
+          closedTrades: pnl?.closedTrades ?? 0,
+          totalBuy: pnl?.totalBuy ?? 0n,
+          totalSell: pnl?.totalSell ?? 0n,
+          totalCommissionFlat: pnl?.totalCommissionFlat ?? 0n,
+          totalPermilleCommission: pnl?.totalPermilleCommission ?? 0n,
+        };
+      });
     }),
 });

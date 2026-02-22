@@ -17,8 +17,8 @@ describe("formatDate", () => {
 
 describe("formatDateTime", () => {
   it("includes time", () => {
-    // Use local time (no Z suffix) — formatDateTime uses system locale
-    const result = formatDateTime(new Date("2026-01-15T14:30:00"));
+    // Use UTC time — formatDateTime uses UTC timezone
+    const result = formatDateTime(new Date("2026-01-15T14:30:00Z"));
     expect(result).toContain("15.01.26");
     expect(result).toMatch(/14[:\.]30/);
   });
