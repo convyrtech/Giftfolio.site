@@ -62,7 +62,7 @@ export function DeleteTradeDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete trade?</AlertDialogTitle>
           <AlertDialogDescription>
-            Delete trade {trade.giftName} #{String(trade.giftNumber)}? You can undo this within 5 seconds.
+            Delete trade {trade.giftName}{trade.giftNumber !== null ? ` #${String(trade.giftNumber)}` : ""}? You can undo this within 5 seconds.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -3,6 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate } from "@/lib/formatters";
 import { formatStars, formatTon, type Stars, type NanoTon } from "@/lib/currencies";
 import { getGiftImageUrl } from "@/lib/gift-parser";
@@ -18,56 +19,103 @@ function formatPrice(price: bigint, currency: "STARS" | "TON"): string {
 
 /**
  * Compute profit client-side from trade row data.
- * Stars: sell - buy - flat - ROUND(sell * permille / 1000)
- * TON: sell - buy - ROUND(sell * permille / 1000) (no flat)
+ * Stars: (sell - buy - flat - ROUND(sell * permille / 1000)) * quantity
+ * TON: (sell - buy - ROUND(sell * permille / 1000)) * quantity (no flat)
  * Uses integer rounding: (a + 500) / 1000 for ROUND behavior.
  */
 function computeProfit(trade: Trade): { value: bigint; percent: number | null } | null {
   if (trade.sellPrice === null) return null;
   const buy = trade.buyPrice;
   const sell = trade.sellPrice;
+  const qty = BigInt(trade.quantity);
 
-  let commission = 0n;
+  let unitCommission = 0n;
   if (trade.tradeCurrency === "STARS") {
-    commission += trade.commissionFlatStars;
+    unitCommission += trade.commissionFlatStars;
   }
   // Round: (sell * permille + 500) / 1000
-  commission += (sell * BigInt(trade.commissionPermille) + 500n) / 1000n;
+  unitCommission += (sell * BigInt(trade.commissionPermille) + 500n) / 1000n;
 
-  const profit = sell - buy - commission;
-  const percent = buy > 0n ? Number((profit * 10000n) / buy) / 100 : null;
+  const unitProfit = sell - buy - unitCommission;
+  const totalProfit = unitProfit * qty;
+  const percent = buy > 0n ? Number((unitProfit * 10000n) / buy) / 100 : null;
 
-  return { value: profit, percent };
+  return { value: totalProfit, percent };
 }
 
 export const columns: ColumnDef<Trade>[] = [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && "indeterminate")
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+        className="translate-y-[2px]"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+        className="translate-y-[2px]"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+    size: 40,
+  },
   {
     accessorKey: "giftName",
     header: "Gift",
     cell: ({ row }) => {
       const trade = row.original;
-      const nameLower = trade.giftSlug.slice(0, trade.giftSlug.lastIndexOf("-")).toLowerCase();
-      const imageUrl = getGiftImageUrl(nameLower, Number(trade.giftNumber));
+      const hasNumber = trade.giftNumber !== null;
+      const nameLower = hasNumber
+        ? trade.giftSlug.slice(0, trade.giftSlug.lastIndexOf("-")).toLowerCase()
+        : trade.giftName.toLowerCase();
+      const imageUrl = hasNumber
+        ? getGiftImageUrl(nameLower, Number(trade.giftNumber))
+        : null;
 
       return (
         <div className="flex items-center gap-2">
-          <Image
-            src={imageUrl}
-            alt={trade.giftName}
-            width={36}
-            height={36}
-            sizes="36px"
-            loading="lazy"
-            className="rounded"
-          />
+          {imageUrl ? (
+            <Image
+              src={imageUrl}
+              alt={trade.giftName}
+              width={36}
+              height={36}
+              sizes="36px"
+              loading="lazy"
+              className="rounded"
+            />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded bg-muted text-xs font-medium text-muted-foreground">
+              {trade.giftName.slice(0, 2)}
+            </div>
+          )}
           <div className="min-w-0">
-            <div className="truncate text-sm font-medium">{trade.giftName}</div>
-            <div className="text-xs text-muted-foreground">#{String(trade.giftNumber)}</div>
+            <div className="flex items-center gap-1 truncate text-sm font-medium">
+              {trade.giftName}
+              {trade.quantity > 1 && (
+                <Badge variant="secondary" className="ml-1 px-1 py-0 text-[10px]">
+                  x{trade.quantity}
+                </Badge>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {hasNumber ? `#${String(trade.giftNumber)}` : "Collection"}
+            </div>
           </div>
         </div>
       );
     },
-    size: 200,
+    size: 220,
   },
   {
     accessorKey: "tradeCurrency",

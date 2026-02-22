@@ -126,10 +126,13 @@ export const trades = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
 
     // Gift identification
-    giftLink: text("gift_link").notNull(),
+    giftLink: text("gift_link"),
     giftSlug: text("gift_slug").notNull(),
     giftName: text("gift_name").notNull(),
-    giftNumber: bigint("gift_number", { mode: "bigint" }).notNull(),
+    giftNumber: bigint("gift_number", { mode: "bigint" }),
+
+    // Collection / batch support
+    quantity: smallint().default(1).notNull(),
 
     // Gift attributes (nullable — populated from API)
     attrModel: text("attr_model"),
@@ -162,6 +165,10 @@ export const trades = pgTable(
     buyMarketplace: text("buy_marketplace", { enum: marketplaces }),
     sellMarketplace: text("sell_marketplace", { enum: marketplaces }),
 
+    // Visibility & PnL flags
+    isHidden: boolean("is_hidden").default(false).notNull(),
+    excludeFromPnl: boolean("exclude_from_pnl").default(false).notNull(),
+
     // Soft delete
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
 
@@ -170,9 +177,13 @@ export const trades = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    // Prevent duplicate open positions for same gift by same user
+    // Prevent duplicate open positions for same gift by same user (individual items only)
     uniqueIndex("uq_trades_user_gift_open").on(table.userId, table.giftSlug).where(
-      sql`${table.sellDate} IS NULL AND ${table.deletedAt} IS NULL`,
+      sql`${table.sellDate} IS NULL AND ${table.deletedAt} IS NULL AND ${table.giftNumber} IS NOT NULL`,
+    ),
+    // Fast lookup for hidden trades filter
+    index("idx_trades_hidden").on(table.userId, table.isHidden).where(
+      sql`${table.deletedAt} IS NULL`,
     ),
     // Fast lookup: user's active trades sorted by date
     index("idx_trades_user_active")
@@ -180,6 +191,7 @@ export const trades = pgTable(
       .where(sql`${table.deletedAt} IS NULL`),
     // Gift slug lookup
     index("idx_trades_gift_slug").on(table.userId, table.giftSlug),
+    check("chk_quantity_range", sql`${table.quantity} >= 1 AND ${table.quantity} <= 9999`),
     check("chk_buy_price_positive", sql`${table.buyPrice} >= 0`),
     check(
       "chk_sell_price_positive",
@@ -205,10 +217,13 @@ export const tradeProfits = pgView("trade_profits", {
   giftName: text("gift_name"),
   giftNumber: bigint("gift_number", { mode: "bigint" }),
   tradeCurrency: text("trade_currency"),
+  quantity: smallint(),
   buyPrice: bigint("buy_price", { mode: "bigint" }),
   sellPrice: bigint("sell_price", { mode: "bigint" }),
   commissionFlatStars: bigint("commission_flat_stars", { mode: "bigint" }),
   commissionPermille: smallint("commission_permille"),
+  isHidden: boolean("is_hidden"),
+  excludeFromPnl: boolean("exclude_from_pnl"),
   netProfitStars: bigint("net_profit_stars", { mode: "bigint" }),
   netProfitNanoton: bigint("net_profit_nanoton", { mode: "bigint" }),
   netProfitUsd: numeric("net_profit_usd", { precision: 18, scale: 8 }),

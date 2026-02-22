@@ -1,24 +1,28 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { and, eq, isNull, desc, asc, lt, gt } from "drizzle-orm";
+import { and, eq, isNull, desc, asc, lt, gt, inArray } from "drizzle-orm";
 import { router, protectedProcedure } from "../trpc";
 import { trades, type Trade, userSettings } from "@/server/db/schema";
 import { parseGiftUrl, getGiftTelegramUrl } from "@/lib/gift-parser";
 import { getTonUsdRate, getStarsUsdRate } from "@/lib/exchange-rates";
 
 const sortColumns = ["buy_date", "sell_date", "buy_price", "sell_price", "created_at"] as const;
+const marketplaceEnum = z.enum(["fragment", "getgems", "tonkeeper", "p2p", "other"]);
 
 const tradeInput = z.object({
-  giftUrl: z.string().min(1).max(500),
+  giftUrl: z.string().min(1).max(500).optional(),
+  giftName: z.string().min(1).max(200).optional(),
   tradeCurrency: z.enum(["STARS", "TON"]),
   buyPrice: z.coerce.bigint().min(0n),
   sellPrice: z.coerce.bigint().min(0n).optional(),
   buyDate: z.coerce.date(),
   sellDate: z.coerce.date().optional(),
+  quantity: z.number().int().min(1).max(9999).default(1),
   commissionFlatStars: z.coerce.bigint().min(0n).optional(),
   commissionPermille: z.number().int().min(0).max(1000).optional(),
-  buyMarketplace: z.enum(["fragment", "getgems", "tonkeeper", "p2p", "other"]).optional(),
-  sellMarketplace: z.enum(["fragment", "getgems", "tonkeeper", "p2p", "other"]).optional(),
+  buyMarketplace: marketplaceEnum.optional(),
+  sellMarketplace: marketplaceEnum.optional(),
+  excludeFromPnl: z.boolean().default(false),
   notes: z.string().max(1000).optional(),
   // Gift attributes (optional, from API)
   attrModel: z.string().optional(),
@@ -27,7 +31,10 @@ const tradeInput = z.object({
   attrModelRarity: z.string().optional(),
   attrBackdropRarity: z.string().optional(),
   attrSymbolRarity: z.string().optional(),
-});
+}).refine(
+  (data) => data.giftUrl || data.giftName,
+  { message: "Either giftUrl or giftName is required" },
+);
 
 export const tradesRouter = router({
   list: protectedProcedure
@@ -39,16 +46,20 @@ export const tradesRouter = router({
         sortDir: z.enum(["asc", "desc"]).default("desc"),
         currency: z.enum(["STARS", "TON"]).optional(),
         showDeleted: z.boolean().default(false),
+        showHidden: z.boolean().default(false),
       }),
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.user.id;
-      const { cursor, limit, sort, sortDir, currency, showDeleted } = input;
+      const { cursor, limit, sort, sortDir, currency, showDeleted, showHidden } = input;
 
       const conditions = [eq(trades.userId, userId)];
 
       if (!showDeleted) {
         conditions.push(isNull(trades.deletedAt));
+      }
+      if (!showHidden) {
+        conditions.push(eq(trades.isHidden, false));
       }
       if (currency) {
         conditions.push(eq(trades.tradeCurrency, currency));
@@ -93,10 +104,30 @@ export const tradesRouter = router({
   add: protectedProcedure.input(tradeInput).mutation(async ({ ctx, input }) => {
     const userId = ctx.user.id;
 
-    // Parse gift URL
-    const parsed = parseGiftUrl(input.giftUrl);
-    if (!parsed) {
-      throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid gift URL format" });
+    // Determine gift identification (item mode vs collection mode)
+    let giftLink: string | null = null;
+    let giftSlug: string;
+    let giftName: string;
+    let giftNumber: bigint | null = null;
+
+    if (input.giftUrl) {
+      // Item mode: parse URL
+      const parsed = parseGiftUrl(input.giftUrl);
+      if (!parsed) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid gift URL format" });
+      }
+      giftLink = getGiftTelegramUrl(parsed.slug);
+      giftSlug = parsed.slug;
+      giftName = parsed.name;
+      giftNumber = BigInt(parsed.number);
+    } else if (input.giftName) {
+      // Collection mode: generate synthetic slug
+      giftName = input.giftName;
+      giftSlug = `${giftName}-batch-${Date.now()}`;
+      giftLink = null;
+      giftNumber = null;
+    } else {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Either giftUrl or giftName is required" });
     }
 
     // Lock commission from user settings (or use override)
@@ -134,10 +165,11 @@ export const tradesRouter = router({
       .insert(trades)
       .values({
         userId,
-        giftLink: getGiftTelegramUrl(parsed.slug),
-        giftSlug: parsed.slug,
-        giftName: parsed.name,
-        giftNumber: BigInt(parsed.number),
+        giftLink,
+        giftSlug,
+        giftName,
+        giftNumber,
+        quantity: input.quantity,
         tradeCurrency: input.tradeCurrency,
         buyPrice: input.buyPrice,
         sellPrice: input.sellPrice ?? null,
@@ -149,6 +181,7 @@ export const tradesRouter = router({
         sellRateUsd,
         buyMarketplace: input.buyMarketplace ?? null,
         sellMarketplace: input.sellMarketplace ?? null,
+        excludeFromPnl: input.excludeFromPnl,
         notes: input.notes ?? null,
         attrModel: input.attrModel ?? null,
         attrBackdrop: input.attrBackdrop ?? null,
@@ -168,12 +201,13 @@ export const tradesRouter = router({
         id: z.coerce.bigint(),
         sellPrice: z.coerce.bigint().min(0n).optional(),
         sellDate: z.coerce.date().optional(),
-        sellMarketplace: z
-          .enum(["fragment", "getgems", "tonkeeper", "p2p", "other"])
-          .optional(),
+        sellMarketplace: marketplaceEnum.optional(),
         notes: z.string().max(1000).optional(),
         commissionFlatStars: z.coerce.bigint().min(0n).optional(),
         commissionPermille: z.number().int().min(0).max(1000).optional(),
+        quantity: z.number().int().min(1).max(9999).optional(),
+        isHidden: z.boolean().optional(),
+        excludeFromPnl: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -218,6 +252,15 @@ export const tradesRouter = router({
       }
       if (input.commissionPermille !== undefined) {
         updateData.commissionPermille = input.commissionPermille;
+      }
+      if (input.quantity !== undefined) {
+        updateData.quantity = input.quantity;
+      }
+      if (input.isHidden !== undefined) {
+        updateData.isHidden = input.isHidden;
+      }
+      if (input.excludeFromPnl !== undefined) {
+        updateData.excludeFromPnl = input.excludeFromPnl;
       }
 
       const [updated] = await ctx.db
@@ -272,6 +315,94 @@ export const tradesRouter = router({
       }
 
       return { success: true };
+    }),
+
+  bulkUpdate: protectedProcedure
+    .input(
+      z.object({
+        ids: z.array(z.coerce.bigint()).min(1).max(500),
+        sellPrice: z.coerce.bigint().min(0n).optional(),
+        sellDate: z.coerce.date().optional(),
+        isHidden: z.boolean().optional(),
+        excludeFromPnl: z.boolean().optional(),
+        commissionFlatStars: z.coerce.bigint().min(0n).optional(),
+        commissionPermille: z.number().int().min(0).max(1000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { ids, ...fields } = input;
+
+      const updateData: Partial<Trade> = { updatedAt: new Date() };
+
+      if (fields.sellPrice !== undefined) updateData.sellPrice = fields.sellPrice;
+      if (fields.isHidden !== undefined) updateData.isHidden = fields.isHidden;
+      if (fields.excludeFromPnl !== undefined) updateData.excludeFromPnl = fields.excludeFromPnl;
+      if (fields.commissionFlatStars !== undefined) updateData.commissionFlatStars = fields.commissionFlatStars;
+      if (fields.commissionPermille !== undefined) updateData.commissionPermille = fields.commissionPermille;
+
+      if (fields.sellDate !== undefined) {
+        updateData.sellDate = fields.sellDate;
+        // Lock sell rate — use Stars rate as best-effort (individual rate lock not possible for bulk)
+        updateData.sellRateUsd = getStarsUsdRate().toString();
+      }
+
+      const updated = await ctx.db
+        .update(trades)
+        .set(updateData)
+        .where(
+          and(
+            inArray(trades.id, ids),
+            eq(trades.userId, userId),
+            isNull(trades.deletedAt),
+          ),
+        )
+        .returning({ id: trades.id });
+
+      return { count: updated.length };
+    }),
+
+  bulkDelete: protectedProcedure
+    .input(z.object({ ids: z.array(z.coerce.bigint()).min(1).max(500) }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+
+      const deleted = await ctx.db
+        .update(trades)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(
+          and(
+            inArray(trades.id, input.ids),
+            eq(trades.userId, userId),
+            isNull(trades.deletedAt),
+          ),
+        )
+        .returning({ id: trades.id });
+
+      return { count: deleted.length };
+    }),
+
+  toggleHidden: protectedProcedure
+    .input(z.object({ id: z.coerce.bigint() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+
+      const [existing] = await ctx.db
+        .select({ isHidden: trades.isHidden })
+        .from(trades)
+        .where(and(eq(trades.id, input.id), eq(trades.userId, userId)));
+
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Trade not found" });
+      }
+
+      const [updated] = await ctx.db
+        .update(trades)
+        .set({ isHidden: !existing.isHidden, updatedAt: new Date() })
+        .where(and(eq(trades.id, input.id), eq(trades.userId, userId)))
+        .returning();
+
+      return updated!;
     }),
 
   exportCsv: protectedProcedure

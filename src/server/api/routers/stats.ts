@@ -43,26 +43,26 @@ export const statsRouter = router({
         );
       }
 
-      // PnL stats — only closed trades (with sellDate)
+      // PnL stats — only closed trades (with sellDate), multiplied by quantity
       const pnlResult = await ctx.db
         .select({
           tradeCurrency: trades.tradeCurrency,
-          closedTrades: sql<number>`count(*)::int`.mapWith(Number),
-          totalBuy: sql<bigint>`coalesce(sum(${trades.buyPrice}), 0)`.mapWith(BigInt),
-          totalSell: sql<bigint>`coalesce(sum(${trades.sellPrice}), 0)`.mapWith(BigInt),
-          totalCommissionFlat: sql<bigint>`coalesce(sum(${trades.commissionFlatStars}), 0)`.mapWith(BigInt),
-          totalPermilleCommission: sql<bigint>`coalesce(sum(ROUND(${trades.sellPrice} * ${trades.commissionPermille} / 1000.0)), 0)`.mapWith(BigInt),
+          closedTrades: sql<number>`sum(${trades.quantity})::int`.mapWith(Number),
+          totalBuy: sql<bigint>`coalesce(sum(${trades.buyPrice} * ${trades.quantity}), 0)`.mapWith(BigInt),
+          totalSell: sql<bigint>`coalesce(sum(${trades.sellPrice} * ${trades.quantity}), 0)`.mapWith(BigInt),
+          totalCommissionFlat: sql<bigint>`coalesce(sum(${trades.commissionFlatStars} * ${trades.quantity}), 0)`.mapWith(BigInt),
+          totalPermilleCommission: sql<bigint>`coalesce(sum(ROUND(${trades.sellPrice} * ${trades.commissionPermille} / 1000.0) * ${trades.quantity}), 0)`.mapWith(BigInt),
         })
         .from(trades)
         .where(and(...pnlConditions))
         .groupBy(trades.tradeCurrency);
 
-      // Total trade count + open positions — always unfiltered by period
+      // Total trade count + open positions — always unfiltered by period, use quantity
       const countResult = await ctx.db
         .select({
           tradeCurrency: trades.tradeCurrency,
-          totalTrades: sql<number>`count(*)::int`.mapWith(Number),
-          openTrades: sql<number>`count(*) filter (where ${trades.sellDate} is null)::int`.mapWith(Number),
+          totalTrades: sql<number>`sum(${trades.quantity})::int`.mapWith(Number),
+          openTrades: sql<number>`coalesce(sum(${trades.quantity}) filter (where ${trades.sellDate} is null), 0)::int`.mapWith(Number),
         })
         .from(trades)
         .where(and(...baseConditions))
@@ -87,12 +87,11 @@ export const statsRouter = router({
   portfolioValue: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.user.id;
 
-    // Group open positions by gift name with count to reduce data transfer.
-    // Each trade row = exactly one gift unit (enforced by unique index).
+    // Group open positions by gift name with quantity sum to reduce data transfer.
     const openGroups = await ctx.db
       .select({
         giftName: trades.giftName,
-        count: sql<number>`count(*)::int`.mapWith(Number),
+        count: sql<number>`sum(${trades.quantity})::int`.mapWith(Number),
       })
       .from(trades)
       .where(

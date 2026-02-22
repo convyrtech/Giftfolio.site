@@ -5,6 +5,7 @@ import {
   useReactTable,
   getCoreRowModel,
   flexRender,
+  type RowSelectionState,
 } from "@tanstack/react-table";
 import {
   Table,
@@ -15,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import type { Trade } from "@/server/db/schema";
 import { columns } from "./columns";
@@ -24,14 +26,24 @@ interface TradesTableProps {
   currency?: "STARS" | "TON";
   sort?: "buy_date" | "sell_date" | "buy_price" | "sell_price" | "created_at";
   sortDir?: "asc" | "desc";
+  showHidden?: boolean;
+  rowSelection: RowSelectionState;
+  onRowSelectionChange: (selection: RowSelectionState) => void;
 }
 
-export function TradesTable({ currency, sort, sortDir }: TradesTableProps): React.ReactElement {
+export function TradesTable({
+  currency,
+  sort,
+  sortDir,
+  showHidden,
+  rowSelection,
+  onRowSelectionChange,
+}: TradesTableProps): React.ReactElement {
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     trpc.trades.list.useInfiniteQuery(
-      { limit: 50, currency, sort, sortDir },
+      { limit: 50, currency, sort, sortDir, showHidden },
       {
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
       },
@@ -47,6 +59,13 @@ export function TradesTable({ currency, sort, sortDir }: TradesTableProps): Reac
     columns,
     getCoreRowModel: getCoreRowModel(),
     manualSorting: true,
+    enableRowSelection: true,
+    getRowId: (row) => String(row.id),
+    state: { rowSelection },
+    onRowSelectionChange: (updater) => {
+      const next = typeof updater === "function" ? updater(rowSelection) : updater;
+      onRowSelectionChange(next);
+    },
   });
 
   // Stable refs so the IntersectionObserver callback never goes stale
@@ -97,15 +116,25 @@ export function TradesTable({ currency, sort, sortDir }: TradesTableProps): Reac
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
+            {table.getRowModel().rows.map((row) => {
+              const trade = row.original;
+              return (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() ? "selected" : undefined}
+                  className={cn(
+                    row.getIsSelected() && "bg-accent/50",
+                    trade.isHidden && "opacity-50",
+                  )}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
@@ -128,6 +157,7 @@ function TradesTableSkeleton(): React.ReactElement {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-10" />
             <TableHead>Gift</TableHead>
             <TableHead>Currency</TableHead>
             <TableHead>Bought</TableHead>
@@ -141,6 +171,9 @@ function TradesTableSkeleton(): React.ReactElement {
         <TableBody>
           {Array.from({ length: 5 }).map((_, i) => (
             <TableRow key={i}>
+              <TableCell>
+                <Skeleton className="h-4 w-4" />
+              </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
                   <Skeleton className="h-9 w-9 rounded" />

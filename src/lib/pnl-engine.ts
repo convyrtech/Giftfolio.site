@@ -15,6 +15,7 @@ export interface TradeInput {
   commissionPermille: number; // 0-1000, where 1000 = 100%
   buyRateUsd: string | null; // NUMERIC as string from DB
   sellRateUsd: string | null;
+  quantity?: number; // default 1
 }
 
 export interface ProfitResult {
@@ -60,10 +61,11 @@ export function calculateCommission(
  */
 export function calculateProfit(trade: TradeInput): ProfitResult {
   const { tradeCurrency, buyPrice, sellPrice, commissionFlatStars, commissionPermille } = trade;
+  const qty = BigInt(trade.quantity ?? 1);
 
   // Open trade — no profit yet
   if (sellPrice === null) {
-    const buyValueUsd = computeUsdValue(tradeCurrency, buyPrice, trade.buyRateUsd);
+    const buyValueUsd = computeUsdValue(tradeCurrency, buyPrice * qty, trade.buyRateUsd);
     return {
       netProfit: null,
       grossProfit: null,
@@ -75,18 +77,24 @@ export function calculateProfit(trade: TradeInput): ProfitResult {
     };
   }
 
-  const totalCommission = calculateCommission(
+  // Per-unit commission (each gift = one transfer)
+  const unitCommission = calculateCommission(
     tradeCurrency,
     sellPrice,
     commissionFlatStars,
     commissionPermille,
   );
 
-  const grossProfit = sellPrice - buyPrice;
-  const netProfit = grossProfit - totalCommission;
+  const unitGross = sellPrice - buyPrice;
+  const unitNet = unitGross - unitCommission;
 
-  const buyValueUsd = computeUsdValue(tradeCurrency, buyPrice, trade.buyRateUsd);
-  const sellValueUsd = computeUsdValue(tradeCurrency, sellPrice, trade.sellRateUsd);
+  // Total = per-unit * quantity
+  const totalCommission = unitCommission * qty;
+  const grossProfit = unitGross * qty;
+  const netProfit = unitNet * qty;
+
+  const buyValueUsd = computeUsdValue(tradeCurrency, buyPrice * qty, trade.buyRateUsd);
+  const sellValueUsd = computeUsdValue(tradeCurrency, sellPrice * qty, trade.sellRateUsd);
 
   let netProfitUsd: number | null = null;
   if (buyValueUsd !== null && sellValueUsd !== null) {
@@ -96,9 +104,10 @@ export function calculateProfit(trade: TradeInput): ProfitResult {
     }
   }
 
+  // Profit percent stays per-unit (% doesn't change with quantity)
   let profitPercent: number | null = null;
   if (buyPrice > 0n) {
-    profitPercent = Number((netProfit * 10000n) / buyPrice) / 100;
+    profitPercent = Number((unitNet * 10000n) / buyPrice) / 100;
   }
 
   return {

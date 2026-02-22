@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Plus } from "lucide-react";
+import { Download, Plus, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -10,6 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
 import { nanoTonToTonString, type NanoTon } from "@/lib/currencies";
 import type { Trade } from "@/server/db/schema";
@@ -26,6 +31,8 @@ interface TradesToolbarProps {
   onSortChange: (value: SortColumn) => void;
   sortDir: SortDir;
   onSortDirChange: (value: SortDir) => void;
+  showHidden: boolean;
+  onShowHiddenChange: (value: boolean) => void;
 }
 
 export function TradesToolbar({
@@ -35,6 +42,8 @@ export function TradesToolbar({
   onSortChange,
   sortDir,
   onSortDirChange,
+  showHidden,
+  onShowHiddenChange,
 }: TradesToolbarProps): React.ReactElement {
   const [showForm, setShowForm] = useState(false);
 
@@ -80,6 +89,25 @@ export function TradesToolbar({
           </SelectContent>
         </Select>
 
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={showHidden ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => onShowHiddenChange(!showHidden)}
+            >
+              {showHidden ? (
+                <Eye className="h-4 w-4" />
+              ) : (
+                <EyeOff className="h-4 w-4" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {showHidden ? "Showing hidden trades" : "Hidden trades not shown"}
+          </TooltipContent>
+        </Tooltip>
+
         <div className="ml-auto">
           <ExportCsvButton currency={currency === "all" ? undefined : currency} />
         </div>
@@ -123,6 +151,7 @@ function generateCsv(trades: Trade[]): string {
   const headers = [
     "Gift Name",
     "Gift Number",
+    "Quantity",
     "Buy Date",
     "Sell Date",
     "Currency",
@@ -134,7 +163,8 @@ function generateCsv(trades: Trade[]): string {
 
   const rows = trades.map((t) => [
     t.giftName,
-    String(t.giftNumber),
+    t.giftNumber !== null ? String(t.giftNumber) : "",
+    String(t.quantity),
     t.buyDate instanceof Date ? t.buyDate.toISOString().slice(0, 10) : String(t.buyDate),
     t.sellDate
       ? t.sellDate instanceof Date
