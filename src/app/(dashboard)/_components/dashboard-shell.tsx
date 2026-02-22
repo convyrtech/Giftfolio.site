@@ -67,7 +67,7 @@ export function DashboardShell({ user, children }: DashboardShellProps): React.R
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 min-h-[44px] min-w-[44px]"
               onClick={() => void authClient.signOut()}
             >
               <LogOut className="h-4 w-4" />
@@ -76,13 +76,13 @@ export function DashboardShell({ user, children }: DashboardShellProps): React.R
         </div>
       </header>
 
-      {/* Main content — pb-16 to avoid overlap with mobile bottom nav */}
-      <main className="mx-auto w-full max-w-7xl flex-1 p-4 pb-20 md:pb-4">
+      {/* Main content — compensate for mobile bottom nav + safe-area */}
+      <main className="mx-auto w-full max-w-7xl flex-1 p-4 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-4">
         {children}
       </main>
 
       {/* Mobile bottom nav — safe-area for iPhone notch */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)] md:hidden">
         <div className="flex h-14 items-center justify-around">
           {navItems.map((item) => (
             <Link

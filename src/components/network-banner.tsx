@@ -3,23 +3,29 @@
 import { useSyncExternalStore } from "react";
 import { WifiOff } from "lucide-react";
 
+// Hoisted to module scope for referential stability — prevents
+// useSyncExternalStore from re-subscribing on every render.
 const emptySubscribe = (): (() => void) => () => {};
 
+const subscribe =
+  typeof window === "undefined"
+    ? emptySubscribe
+    : (callback: () => void): (() => void) => {
+        window.addEventListener("online", callback);
+        window.addEventListener("offline", callback);
+        return () => {
+          window.removeEventListener("online", callback);
+          window.removeEventListener("offline", callback);
+        };
+      };
+
+const getSnapshot = (): boolean =>
+  typeof window === "undefined" ? true : navigator.onLine;
+
+const getServerSnapshot = (): boolean => true;
+
 function useOnlineStatus(): boolean {
-  return useSyncExternalStore(
-    typeof window === "undefined"
-      ? emptySubscribe
-      : (callback) => {
-          window.addEventListener("online", callback);
-          window.addEventListener("offline", callback);
-          return () => {
-            window.removeEventListener("online", callback);
-            window.removeEventListener("offline", callback);
-          };
-        },
-    () => (typeof window === "undefined" ? true : navigator.onLine),
-    () => true,
-  );
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
 export function NetworkBanner(): React.ReactElement | null {

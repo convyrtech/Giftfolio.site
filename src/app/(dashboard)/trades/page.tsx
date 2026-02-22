@@ -15,7 +15,7 @@ export default function TradesPage(): React.ReactElement {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   return (
-    <div className="space-y-4 pb-20 md:pb-4">
+    <div className="space-y-4 pb-4">
       <SummaryCards />
 
       <TradesToolbar

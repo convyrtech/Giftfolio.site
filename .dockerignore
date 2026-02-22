@@ -2,8 +2,16 @@ node_modules
 .next
 .git
 .env
-.env.local
+.env.*
 docs
 *.md
 .claude
 .vscode
+.serena
+drizzle/
+drizzle.config.ts
+vitest.config.*
+coverage/
+*.log
+Dockerfile
+.dockerignore

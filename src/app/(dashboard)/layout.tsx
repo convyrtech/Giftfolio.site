@@ -7,7 +7,7 @@ import { DashboardShell } from "./_components/dashboard-shell";
 export const metadata: Metadata = {
   title: {
     template: "%s — Giftfolio",
-    default: "Giftfolio",
+    default: "Giftfolio — Telegram Gift Trading Tracker",
   },
 };
 

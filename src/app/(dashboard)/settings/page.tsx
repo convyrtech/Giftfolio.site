@@ -60,7 +60,7 @@ export default function SettingsPage(): React.ReactElement {
   if (isLoading) return <SettingsSkeleton />;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 pb-20 md:pb-4">
+    <div className="mx-auto max-w-2xl space-y-6 pb-4">
       <h1 className="text-2xl font-bold">Settings</h1>
 
       {/* Commission */}
