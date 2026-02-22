@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "next-devtools": {
+      "command": "npx",
+      "args": ["-y", "next-devtools-mcp@latest"]
+    },
+    "drizzle": {
+      "command": "npx",
+      "args": ["-y", "drizzle-mcp", "./drizzle.config.ts"]
+    },
+    "tailwindcss": {
+      "command": "npx",
+      "args": ["-y", "tailwindcss-mcp-server"]
+    },
+    "tanstack": {
+      "command": "npx",
+      "args": ["-y", "@tanstack/cli", "mcp"]
+    },
+    "better-auth": {
+      "command": "npx",
+      "args": ["-y", "@better-auth/mcp"]
+    }
+  }
+}

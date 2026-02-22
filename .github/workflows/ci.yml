@@ -1,0 +1,24 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run format:check
+      - name: Build
+        run: npm run build
+        env:
+          DATABASE_URL: "postgresql://fake:fake@localhost:5432/fake"
+          TELEGRAM_BOT_TOKEN: "0000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          BETTER_AUTH_SECRET: "a]G$kR9pL2mQ7xW4vN8jF5hT0sY3bU6c"
+          NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: "test_bot"
+          NEXT_PUBLIC_APP_URL: "http://localhost:3000"
