@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BarChart3, Settings, LogOut, Gift } from "lucide-react";
+import { BarChart3, TrendingUp, Settings, LogOut, Gift } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
@@ -15,6 +15,7 @@ interface DashboardShellProps {
 
 const navItems = [
   { href: "/trades", label: "Trades", icon: BarChart3 },
+  { href: "/analytics", label: "Analytics", icon: TrendingUp },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
