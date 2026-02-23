@@ -73,11 +73,16 @@ export function TradesTable({
     onError: (err) => toast.error(err.message),
   });
 
+  const { data: floorPrices = {} } = trpc.market.floorPrices.useQuery(undefined, {
+    staleTime: 60 * 60 * 1000, // 1h — matches server cache TTL
+  });
+
   const tableMeta: TradesTableMeta = {
     onEdit: setEditTrade,
     onDelete: setDeleteTrade,
     onToggleHidden: (trade) => toggleHidden.mutate({ id: trade.id }),
     onToggleExclude: (trade) => toggleExclude.mutate({ id: trade.id }),
+    floorPrices,
   };
 
   const allTrades = useMemo<Trade[]>(
@@ -212,6 +217,7 @@ function TradesTableSkeleton(): React.ReactElement {
             <TableHead>Buy Price</TableHead>
             <TableHead>Sell Price</TableHead>
             <TableHead>Profit</TableHead>
+            <TableHead>Floor / PnL</TableHead>
             <TableHead />
           </TableRow>
         </TableHeader>
@@ -230,7 +236,7 @@ function TradesTableSkeleton(): React.ReactElement {
                   </div>
                 </div>
               </TableCell>
-              {Array.from({ length: 6 }).map((_, j) => (
+              {Array.from({ length: 7 }).map((_, j) => (
                 <TableCell key={j}>
                   <Skeleton className="h-4 w-16" />
                 </TableCell>

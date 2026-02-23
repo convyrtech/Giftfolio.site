@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculateCommission,
   calculateProfit,
+  calculateUnrealizedPnl,
   aggregateStats,
   type TradeInput,
 } from "../pnl-engine";
@@ -180,6 +181,80 @@ describe("calculateProfit", () => {
     const result = calculateProfit(trade);
     expect(result.netProfit).toBe(500n);
     expect(result.profitPercent).toBeNull();
+  });
+});
+
+// ─── Unrealized PnL ───
+
+describe("calculateUnrealizedPnl", () => {
+  it("Stars: basic unrealized profit", () => {
+    // buy=1000, floor=1500, flat=50, permille=100 (10%)
+    // commission on sell at 1500: 50 + ROUND(1500*100/1000) = 50 + 150 = 200
+    // unitNet = 1500 - 1000 - 200 = 300
+    const result = calculateUnrealizedPnl(1000n, "STARS", 1500, 50n, 100, 1);
+    expect(result.floorPriceStars).toBe(1500n);
+    expect(result.unrealizedPnl).toBe(300n);
+    expect(result.unrealizedPercent).toBeCloseTo(30.0, 0);
+  });
+
+  it("Stars: unrealized loss", () => {
+    // buy=1000, floor=800, no commission
+    // unitNet = 800 - 1000 - 0 = -200
+    const result = calculateUnrealizedPnl(1000n, "STARS", 800, 0n, 0, 1);
+    expect(result.unrealizedPnl).toBe(-200n);
+    expect(result.unrealizedPercent).toBeCloseTo(-20.0, 0);
+  });
+
+  it("Stars: quantity multiplies total", () => {
+    // buy=1000, floor=1500, no commission, qty=5
+    // unitNet = 500, total = 2500
+    const result = calculateUnrealizedPnl(1000n, "STARS", 1500, 0n, 0, 5);
+    expect(result.unrealizedPnl).toBe(2500n);
+    // Percent is per-unit
+    expect(result.unrealizedPercent).toBeCloseTo(50.0, 0);
+  });
+
+  it("Stars: zero buy price returns null percent", () => {
+    const result = calculateUnrealizedPnl(0n, "STARS", 500, 0n, 0, 1);
+    expect(result.unrealizedPnl).toBe(500n);
+    expect(result.unrealizedPercent).toBeNull();
+  });
+
+  it("TON: returns null unrealizedPnl (cross-currency)", () => {
+    const result = calculateUnrealizedPnl(5_000_000_000n, "TON", 1500, 0n, 50, 1);
+    expect(result.floorPriceStars).toBe(1500n);
+    expect(result.unrealizedPnl).toBeNull();
+    expect(result.unrealizedPercent).toBeNull();
+  });
+
+  it("Stars: floor price rounded from fractional", () => {
+    const result = calculateUnrealizedPnl(1000n, "STARS", 1500.7, 0n, 0, 1);
+    expect(result.floorPriceStars).toBe(1501n);
+    expect(result.unrealizedPnl).toBe(501n);
+  });
+
+  it("returns null for NaN floor price", () => {
+    const result = calculateUnrealizedPnl(1000n, "STARS", NaN, 0n, 0, 1);
+    expect(result.floorPriceStars).toBe(0n);
+    expect(result.unrealizedPnl).toBeNull();
+  });
+
+  it("returns null for zero floor price", () => {
+    const result = calculateUnrealizedPnl(1000n, "STARS", 0, 0n, 0, 1);
+    expect(result.floorPriceStars).toBe(0n);
+    expect(result.unrealizedPnl).toBeNull();
+  });
+
+  it("returns null for negative floor price", () => {
+    const result = calculateUnrealizedPnl(1000n, "STARS", -100, 0n, 0, 1);
+    expect(result.floorPriceStars).toBe(0n);
+    expect(result.unrealizedPnl).toBeNull();
+  });
+
+  it("returns null for Infinity floor price", () => {
+    const result = calculateUnrealizedPnl(1000n, "STARS", Infinity, 0n, 0, 1);
+    expect(result.floorPriceStars).toBe(0n);
+    expect(result.unrealizedPnl).toBeNull();
   });
 });
 

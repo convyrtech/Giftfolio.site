@@ -3,11 +3,17 @@
 import type { ColumnDef, RowData } from "@tanstack/react-table";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate } from "@/lib/formatters";
 import { formatStars, formatTon, type Stars, type NanoTon } from "@/lib/currencies";
-import { calculateProfit } from "@/lib/pnl-engine";
+import { calculateProfit, calculateUnrealizedPnl } from "@/lib/pnl-engine";
 import { getGiftImageUrl } from "@/lib/gift-parser";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { Trade } from "@/server/db/schema";
 import { TradeRowActions } from "./trade-row-actions";
 
@@ -16,6 +22,7 @@ export interface TradesTableMeta {
   onDelete: (trade: Trade) => void;
   onToggleHidden: (trade: Trade) => void;
   onToggleExclude: (trade: Trade) => void;
+  floorPrices: Record<string, number>;
 }
 
 // Type-safe module augmentation — removes need for unsafe `as` cast
@@ -26,6 +33,7 @@ declare module "@tanstack/react-table" {
     onDelete: (trade: Trade) => void;
     onToggleHidden: (trade: Trade) => void;
     onToggleExclude: (trade: Trade) => void;
+    floorPrices: Record<string, number>;
   }
 }
 
@@ -118,6 +126,31 @@ export const columns: ColumnDef<Trade>[] = [
                   x{trade.quantity}
                 </Badge>
               )}
+              {(() => {
+                const rarity = trade.attrModelRarity ?? trade.attrBackdropRarity ?? trade.attrSymbolRarity;
+                if (!rarity) return null;
+                return (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "ml-1 px-1 py-0 text-[9px]",
+                          rarity === "Rare" && "border-yellow-500/50 text-yellow-500",
+                          rarity === "Unique" && "border-purple-500/50 text-purple-500",
+                        )}
+                      >
+                        {rarity === "Rare" ? "R" : rarity === "Unique" ? "U" : rarity.charAt(0)}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      {trade.attrModel && <div>Model: {trade.attrModel}{trade.attrModelRarity && ` (${trade.attrModelRarity})`}</div>}
+                      {trade.attrBackdrop && <div>Backdrop: {trade.attrBackdrop}{trade.attrBackdropRarity && ` (${trade.attrBackdropRarity})`}</div>}
+                      {trade.attrSymbol && <div>Symbol: {trade.attrSymbol}{trade.attrSymbolRarity && ` (${trade.attrSymbolRarity})`}</div>}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })()}
             </div>
             <div className="text-xs text-muted-foreground">
               {hasNumber ? `#${String(trade.giftNumber)}` : "Collection"}
@@ -207,6 +240,69 @@ export const columns: ColumnDef<Trade>[] = [
       );
     },
     size: 160,
+  },
+  {
+    id: "unrealizedPnl",
+    header: "Floor / PnL",
+    cell: ({ row, table }) => {
+      const trade = row.original;
+      // Only meaningful for open positions (sellPrice = null means unsold)
+      if (trade.sellPrice !== null) {
+        return <span className="text-sm text-muted-foreground">{"\u2014"}</span>;
+      }
+
+      const floorPrices = table.options.meta?.floorPrices ?? {};
+      const floorStars = floorPrices[trade.giftName];
+      if (floorStars === undefined || floorStars <= 0) {
+        return <span className="text-xs text-muted-foreground">N/A</span>;
+      }
+
+      const result = calculateUnrealizedPnl(
+        trade.buyPrice,
+        trade.tradeCurrency,
+        floorStars,
+        trade.commissionFlatStars,
+        trade.commissionPermille,
+        trade.quantity,
+      );
+
+      // TON trades: show floor price only, PnL not computable
+      if (result.unrealizedPnl === null) {
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="tabular-nums text-sm text-muted-foreground">
+                {formatPrice(result.floorPriceStars, "STARS")}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              Floor in Stars. TON PnL requires rate conversion.
+            </TooltipContent>
+          </Tooltip>
+        );
+      }
+
+      const isPositive = result.unrealizedPnl > 0n;
+      const isNegative = result.unrealizedPnl < 0n;
+
+      return (
+        <div className="tabular-nums text-sm">
+          <div className="text-xs text-muted-foreground">
+            {formatPrice(result.floorPriceStars, "STARS")}
+          </div>
+          <span className={isPositive ? "text-green-500" : isNegative ? "text-red-500" : ""}>
+            {isPositive ? "+" : ""}
+            {formatPrice(result.unrealizedPnl, "STARS")}
+          </span>
+          {result.unrealizedPercent !== null && (
+            <span className="ml-1 text-xs text-muted-foreground">
+              ({result.unrealizedPercent >= 0 ? "+" : ""}{result.unrealizedPercent.toFixed(1)}%)
+            </span>
+          )}
+        </div>
+      );
+    },
+    size: 150,
   },
   {
     id: "actions",

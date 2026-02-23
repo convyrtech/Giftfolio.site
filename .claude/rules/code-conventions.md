@@ -34,6 +34,11 @@ When fixing a bug, ALWAYS search the entire codebase for the same pattern before
 - `z.string()` for constrained values → add `.regex()`, `.refine()`, or `.int()/.positive()`
 - Untyped adapter results (`as unknown`) → type-assert to specific interface
 - Missing unique indexes on columns with `.unique()` → add explicit `uniqueIndex()` in table callback
+- `as SomeType` in shadcn Select handlers → runtime `includes()` validation
+- `useRef` for dialog animation state → conditional render (React Compiler forbids ref in render)
+- SELECT + UPDATE toggle → atomic `sql\`NOT ${column}\`` in single UPDATE
+- Missing `.limit()` on export queries → add `MAX_EXPORT_ROWS` constant
+- Duplicate async calls (e.g. rate fetch) → deduplicate into single variable
 
 ## Styling
 - Tailwind classes only — NEVER inline styles or CSS modules

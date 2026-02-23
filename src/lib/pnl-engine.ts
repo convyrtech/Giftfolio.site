@@ -121,6 +121,63 @@ export function calculateProfit(trade: TradeInput): ProfitResult {
   };
 }
 
+// ─── Unrealized PnL ───
+
+export interface UnrealizedPnlResult {
+  /** Floor price in Stars (always Stars, from giftasset.pro) */
+  floorPriceStars: bigint;
+  /** Unrealized net profit (total, qty-multiplied). Null for TON trades (cross-currency). */
+  unrealizedPnl: bigint | null;
+  /** Unrealized profit percent (per-unit). Null for TON or zero buy price. */
+  unrealizedPercent: number | null;
+}
+
+/**
+ * Calculate unrealized PnL for an open position using floor price.
+ *
+ * Floor prices from giftasset.pro are always in Stars.
+ * - Stars trades: (floor - buy - commission) * qty
+ * - TON trades: null (can't subtract NanoTon from Stars without rate)
+ *
+ * Commission is calculated as if selling at floor price.
+ */
+export function calculateUnrealizedPnl(
+  buyPrice: bigint,
+  tradeCurrency: "STARS" | "TON",
+  floorPriceStars: number,
+  commissionFlatStars: bigint,
+  commissionPermille: number,
+  quantity: number,
+): UnrealizedPnlResult {
+  // Guard against NaN/Infinity — treat as "no data"
+  if (!Number.isFinite(floorPriceStars) || floorPriceStars <= 0) {
+    return { floorPriceStars: 0n as Stars, unrealizedPnl: null, unrealizedPercent: null };
+  }
+
+  const floor = BigInt(Math.round(floorPriceStars));
+
+  if (tradeCurrency === "TON") {
+    return { floorPriceStars: floor, unrealizedPnl: null, unrealizedPercent: null };
+  }
+
+  const qty = BigInt(quantity);
+  // Commission on hypothetical sell at floor price (per-unit)
+  const unitCommission = calculateCommission("STARS", floor, commissionFlatStars, commissionPermille);
+  const unitNet = floor - buyPrice - unitCommission;
+  const totalNet = unitNet * qty;
+
+  let percent: number | null = null;
+  if (buyPrice > 0n) {
+    percent = Number((unitNet * 10000n) / buyPrice) / 100;
+  }
+
+  return {
+    floorPriceStars: floor,
+    unrealizedPnl: totalNet,
+    unrealizedPercent: percent,
+  };
+}
+
 /**
  * Convert a BigInt price to USD using rate string.
  * Stars: price * STARS_USD_RATE (0.013)

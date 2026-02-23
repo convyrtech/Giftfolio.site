@@ -15,9 +15,15 @@ npm run dev          # Dev server
 npm run build        # Production build
 npm run lint         # ESLint
 npm run format       # Prettier
+npm test             # Vitest (86 tests)
 npx drizzle-kit push # Push schema to DB
 npx drizzle-kit generate # Generate migration
 npx drizzle-kit studio   # DB browser
+```
+
+## Verification (run before every commit)
+```
+npx tsc --noEmit && npm run lint && npm test && npm run build
 ```
 
 ## MCP Workflow Rules
@@ -46,6 +52,16 @@ npx drizzle-kit studio   # DB browser
 - Metadata + floor prices: `giftasset.pro/api/v1/` (no auth)
 - Attributes: `api.changes.tg` (no auth)
 
+## Key Patterns (learned from audit)
+- shadcn Select `onValueChange`: runtime narrowing with `includes()`, NEVER `as` cast
+- TanStack Table meta: module augmentation `declare module "@tanstack/react-table"` for type-safe meta
+- SQL toggles: `sql\`NOT ${column}\`` for atomic TOCTOU-safe toggle, NEVER SELECT→UPDATE
+- Dialogs: lift to parent (single instance), pass callbacks via table meta — NOT per-row
+- Neon transactions: only work with pool driver (neon-serverless), NOT neon-http
+- React Compiler: no ref read/write during render, no setState in useEffect for derived state
+- aria-required: always string `"true"` / `"false"`, never boolean
+- Self-review before every commit — catches 2-3 bugs on average
+
 ## Architecture
 Full design: `docs/plans/2026-02-19-architecture-design.md`
 See `.claude/rules/` for code conventions, security rules, and patterns.
@@ -55,3 +71,7 @@ See `.claude/rules/` for code conventions, security rules, and patterns.
 - ALWAYS read `session-state` memory at session start
 - ALWAYS update after milestones
 - Key memories: project-overview, telegram-gifts-api, telegram-marketplaces-api, plan-audit-results, steamfolio-reference
+
+## Audit Status
+Zero-trust audit (103 issues) — ALL FIXED in Phases 7A-7D
+Details: Serena memory `plan-audit-results` + `session-state`
