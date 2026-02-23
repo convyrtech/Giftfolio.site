@@ -284,6 +284,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
             placeholder="https://t.me/nft/EasterEgg-52095"
             value={giftUrl}
             onChange={(e) => handleGiftUrlChange(e.target.value)}
+            aria-required="true"
             autoFocus
           />
           {giftPreview && (
@@ -313,6 +314,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
             placeholder="e.g. PlushPepe"
             value={giftName}
             onChange={(e) => setGiftName(e.target.value)}
+            aria-required="true"
             autoFocus
           />
         </div>
@@ -323,7 +325,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label>Currency</Label>
-            <Select value={currency} onValueChange={(v) => setCurrency(v as "STARS" | "TON")}>
+            <Select value={currency} onValueChange={(v) => { if (v === "STARS" || v === "TON") setCurrency(v); }}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -372,6 +374,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
             placeholder={currency === "STARS" ? "1000" : "3500000000"}
             value={buyPrice}
             onChange={(e) => setBuyPrice(e.target.value.replace(/[^0-9]/g, ""))}
+            aria-required={!isEdit}
             disabled={isEdit}
           />
         </div>
@@ -385,7 +388,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
       {!isEdit && (
         <div className="space-y-2">
           <Label>Buy Marketplace</Label>
-          <Select value={buyMarketplace} onValueChange={(v) => setBuyMarketplace(v as Marketplace)}>
+          <Select value={buyMarketplace} onValueChange={(v) => { if (MARKETPLACES.some((m) => m.value === v)) setBuyMarketplace(v as Marketplace); }}>
             <SelectTrigger>
               <SelectValue placeholder="Select..." />
             </SelectTrigger>
@@ -423,7 +426,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
       {(sellPrice || sellDate) && (
         <div className="space-y-2">
           <Label>Sell Marketplace</Label>
-          <Select value={sellMarketplace} onValueChange={(v) => setSellMarketplace(v as Marketplace)}>
+          <Select value={sellMarketplace} onValueChange={(v) => { if (MARKETPLACES.some((m) => m.value === v)) setSellMarketplace(v as Marketplace); }}>
             <SelectTrigger>
               <SelectValue placeholder="Select..." />
             </SelectTrigger>

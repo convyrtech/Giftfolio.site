@@ -20,9 +20,14 @@ import { nanoTonToTonString, type NanoTon } from "@/lib/currencies";
 import type { Trade } from "@/server/db/schema";
 import { TradeFormDialog } from "./trade-form-dialog";
 
-type CurrencyFilter = "all" | "STARS" | "TON";
-type SortColumn = "buy_date" | "sell_date" | "buy_price" | "sell_price" | "created_at";
-type SortDir = "asc" | "desc";
+const currencyFilters = ["all", "STARS", "TON"] as const;
+type CurrencyFilter = (typeof currencyFilters)[number];
+
+const sortColumns = ["buy_date", "sell_date", "buy_price", "sell_price", "created_at"] as const;
+type SortColumn = (typeof sortColumns)[number];
+
+const sortDirs = ["asc", "desc"] as const;
+type SortDir = (typeof sortDirs)[number];
 
 interface TradesToolbarProps {
   currency: CurrencyFilter;
@@ -55,7 +60,7 @@ export function TradesToolbar({
           Add trade
         </Button>
 
-        <Select value={currency} onValueChange={(v) => onCurrencyChange(v as CurrencyFilter)}>
+        <Select value={currency} onValueChange={(v) => { if ((currencyFilters as readonly string[]).includes(v)) onCurrencyChange(v as CurrencyFilter); }}>
           <SelectTrigger className="w-28" aria-label="Filter by currency">
             <SelectValue placeholder="Currency" />
           </SelectTrigger>
@@ -66,7 +71,7 @@ export function TradesToolbar({
           </SelectContent>
         </Select>
 
-        <Select value={sort} onValueChange={(v) => onSortChange(v as SortColumn)}>
+        <Select value={sort} onValueChange={(v) => { if ((sortColumns as readonly string[]).includes(v)) onSortChange(v as SortColumn); }}>
           <SelectTrigger className="w-32" aria-label="Sort by column">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
@@ -79,7 +84,7 @@ export function TradesToolbar({
           </SelectContent>
         </Select>
 
-        <Select value={sortDir} onValueChange={(v) => onSortDirChange(v as SortDir)}>
+        <Select value={sortDir} onValueChange={(v) => { if ((sortDirs as readonly string[]).includes(v)) onSortDirChange(v as SortDir); }}>
           <SelectTrigger className="w-28" aria-label="Sort direction">
             <SelectValue />
           </SelectTrigger>

@@ -176,18 +176,7 @@ export const tradesRouter = router({
       throw new TRPCError({ code: "BAD_REQUEST", message: "Either giftUrl or giftName is required" });
     }
 
-    // Lock commission from user settings (or use override)
-    const [settings] = await ctx.db
-      .select()
-      .from(userSettings)
-      .where(eq(userSettings.userId, userId));
-
-    const commissionFlat =
-      input.commissionFlatStars ?? settings?.defaultCommissionStars ?? 0n;
-    const commissionPerm =
-      input.commissionPermille ?? settings?.defaultCommissionPermille ?? 0;
-
-    // Lock USD rate at trade time
+    // Lock USD rate at trade time (external calls outside transaction)
     let buyRateUsd: string | null = null;
     if (input.tradeCurrency === "STARS") {
       buyRateUsd = getStarsUsdRate().toString();
@@ -196,7 +185,6 @@ export const tradesRouter = router({
       buyRateUsd = tonRate?.toString() ?? null;
     }
 
-    // Lock sell rate if selling immediately
     let sellRateUsd: string | null = null;
     if (input.sellPrice !== undefined && input.sellDate) {
       if (input.tradeCurrency === "STARS") {
@@ -207,40 +195,55 @@ export const tradesRouter = router({
       }
     }
 
-    const [trade] = await ctx.db
-      .insert(trades)
-      .values({
-        userId,
-        giftLink,
-        giftSlug,
-        giftName,
-        giftNumber,
-        quantity: input.quantity,
-        tradeCurrency: input.tradeCurrency,
-        buyPrice: input.buyPrice,
-        sellPrice: input.sellPrice ?? null,
-        buyDate: input.buyDate,
-        sellDate: input.sellDate ?? null,
-        commissionFlatStars: commissionFlat,
-        commissionPermille: commissionPerm,
-        buyRateUsd,
-        sellRateUsd,
-        buyMarketplace: input.buyMarketplace ?? null,
-        sellMarketplace: input.sellMarketplace ?? null,
-        excludeFromPnl: input.excludeFromPnl,
-        notes: input.notes ?? null,
-        attrModel: input.attrModel ?? null,
-        attrBackdrop: input.attrBackdrop ?? null,
-        attrSymbol: input.attrSymbol ?? null,
-        attrModelRarity: input.attrModelRarity ?? null,
-        attrBackdropRarity: input.attrBackdropRarity ?? null,
-        attrSymbolRarity: input.attrSymbolRarity ?? null,
-      })
-      .returning();
+    // Transaction: read settings + insert trade atomically
+    const trade = await ctx.db.transaction(async (tx) => {
+      const [settings] = await tx
+        .select()
+        .from(userSettings)
+        .where(eq(userSettings.userId, userId));
 
-    if (!trade) {
-      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create trade" });
-    }
+      const commissionFlat =
+        input.commissionFlatStars ?? settings?.defaultCommissionStars ?? 0n;
+      const commissionPerm =
+        input.commissionPermille ?? settings?.defaultCommissionPermille ?? 0;
+
+      const [created] = await tx
+        .insert(trades)
+        .values({
+          userId,
+          giftLink,
+          giftSlug,
+          giftName,
+          giftNumber,
+          quantity: input.quantity,
+          tradeCurrency: input.tradeCurrency,
+          buyPrice: input.buyPrice,
+          sellPrice: input.sellPrice ?? null,
+          buyDate: input.buyDate,
+          sellDate: input.sellDate ?? null,
+          commissionFlatStars: commissionFlat,
+          commissionPermille: commissionPerm,
+          buyRateUsd,
+          sellRateUsd,
+          buyMarketplace: input.buyMarketplace ?? null,
+          sellMarketplace: input.sellMarketplace ?? null,
+          excludeFromPnl: input.excludeFromPnl,
+          notes: input.notes ?? null,
+          attrModel: input.attrModel ?? null,
+          attrBackdrop: input.attrBackdrop ?? null,
+          attrSymbol: input.attrSymbol ?? null,
+          attrModelRarity: input.attrModelRarity ?? null,
+          attrBackdropRarity: input.attrBackdropRarity ?? null,
+          attrSymbolRarity: input.attrSymbolRarity ?? null,
+        })
+        .returning();
+
+      if (!created) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create trade" });
+      }
+
+      return created;
+    });
 
     return trade;
   }),

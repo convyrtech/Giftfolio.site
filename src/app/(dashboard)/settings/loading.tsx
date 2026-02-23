@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export default function SettingsLoading(): React.ReactElement {
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6" role="status" aria-label="Loading settings">
       <Skeleton className="h-8 w-32" />
       <Card>
         <CardHeader>

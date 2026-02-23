@@ -22,7 +22,7 @@ export default function SettingsPage(): React.ReactElement {
 
   const [commissionStars, setCommissionStars] = useState("");
   const [commissionPermille, setCommissionPermille] = useState("");
-  const [defaultCurrency, setDefaultCurrency] = useState("STARS");
+  const [defaultCurrency, setDefaultCurrency] = useState<"STARS" | "TON">("STARS");
   const [timezone, setTimezone] = useState("");
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export default function SettingsPage(): React.ReactElement {
       updateSettings.mutate({
         defaultCommissionStars: BigInt(commissionStars || "0"),
         defaultCommissionPermille: parseInt(commissionPermille || "0", 10),
-        defaultCurrency: defaultCurrency as "STARS" | "TON",
+        defaultCurrency,
         timezone,
       });
     } catch {
@@ -117,8 +117,8 @@ export default function SettingsPage(): React.ReactElement {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Default Currency</Label>
-            <Select value={defaultCurrency} onValueChange={setDefaultCurrency}>
-              <SelectTrigger>
+            <Select value={defaultCurrency} onValueChange={(v) => { if (v === "STARS" || v === "TON") setDefaultCurrency(v); }}>
+              <SelectTrigger aria-label="Default currency">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -156,7 +156,7 @@ export default function SettingsPage(): React.ReactElement {
 
 function SettingsSkeleton(): React.ReactElement {
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6" role="status" aria-label="Loading settings">
       <Skeleton className="h-8 w-32" />
       <Card>
         <CardHeader>

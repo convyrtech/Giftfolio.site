@@ -200,7 +200,7 @@ export function TradesTable({
 
 function TradesTableSkeleton(): React.ReactElement {
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border" role="status" aria-label="Loading trades">
       <Table>
         <TableHeader>
           <TableRow>

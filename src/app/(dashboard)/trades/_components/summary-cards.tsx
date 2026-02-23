@@ -9,7 +9,8 @@ import { formatNumber } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
-type Period = "total" | "day" | "week" | "month";
+const periods = ["total", "day", "week", "month"] as const;
+type Period = (typeof periods)[number];
 
 export function SummaryCards(): React.ReactElement {
   const [period, setPeriod] = useState<Period>("total");
@@ -45,7 +46,7 @@ export function SummaryCards(): React.ReactElement {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-medium text-muted-foreground">Dashboard</h2>
-        <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+        <Tabs value={period} onValueChange={(v) => { if ((periods as readonly string[]).includes(v)) setPeriod(v as Period); }}>
           <TabsList className="h-8">
             <TabsTrigger value="total" className="text-xs px-2">All</TabsTrigger>
             <TabsTrigger value="month" className="text-xs px-2">Month</TabsTrigger>
@@ -114,7 +115,7 @@ function StatCard({ title, value, isPositive, isNegative }: StatCardProps): Reac
             isNegative && "text-red-500",
           )}
         >
-          {value}
+          {isPositive ? "+" : ""}{value}
         </div>
       </CardContent>
     </Card>
@@ -123,7 +124,7 @@ function StatCard({ title, value, isPositive, isNegative }: StatCardProps): Reac
 
 function SummaryCardsSkeleton(): React.ReactElement {
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" role="status" aria-label="Loading dashboard stats">
       <Skeleton className="h-5 w-24" />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
