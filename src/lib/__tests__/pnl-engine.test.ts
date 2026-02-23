@@ -233,8 +233,10 @@ describe("aggregateStats", () => {
     expect(stats.totalProfitStars).toBe(300n); // 500 + (-200) = 300
     expect(stats.totalProfitNanoton).toBeNull();
     expect(stats.winRate).toBe(50); // 1 win out of 2 closed
-    expect(stats.bestTrade).toBe(500n);
-    expect(stats.worstTrade).toBe(-200n);
+    expect(stats.bestTradeStars).toBe(500n);
+    expect(stats.worstTradeStars).toBe(-200n);
+    expect(stats.bestTradeNanoton).toBeNull();
+    expect(stats.worstTradeNanoton).toBeNull();
   });
 
   it("no trades", () => {

@@ -153,8 +153,10 @@ export interface DashboardStats {
   totalProfitNanoton: NanoTon | null;
   totalProfitUsd: number | null;
   winRate: number | null; // 0-100
-  bestTrade: bigint | null;
-  worstTrade: bigint | null;
+  bestTradeStars: bigint | null;
+  worstTradeStars: bigint | null;
+  bestTradeNanoton: bigint | null;
+  worstTradeNanoton: bigint | null;
 }
 
 export function aggregateStats(
@@ -168,8 +170,10 @@ export function aggregateStats(
   let hasUsd = false;
   let wins = 0;
   let closed = 0;
-  let bestTrade: bigint | null = null;
-  let worstTrade: bigint | null = null;
+  let bestTradeStars: bigint | null = null;
+  let worstTradeStars: bigint | null = null;
+  let bestTradeNanoton: bigint | null = null;
+  let worstTradeNanoton: bigint | null = null;
 
   for (const { result, tradeCurrency } of trades) {
     if (result.netProfit === null) continue; // skip open trades
@@ -180,11 +184,13 @@ export function aggregateStats(
     if (tradeCurrency === "STARS") {
       totalStars += result.netProfit;
       hasStars = true;
-      if (bestTrade === null || result.netProfit > bestTrade) bestTrade = result.netProfit;
-      if (worstTrade === null || result.netProfit < worstTrade) worstTrade = result.netProfit;
+      if (bestTradeStars === null || result.netProfit > bestTradeStars) bestTradeStars = result.netProfit;
+      if (worstTradeStars === null || result.netProfit < worstTradeStars) worstTradeStars = result.netProfit;
     } else {
       totalNanoton += result.netProfit;
       hasNanoton = true;
+      if (bestTradeNanoton === null || result.netProfit > bestTradeNanoton) bestTradeNanoton = result.netProfit;
+      if (worstTradeNanoton === null || result.netProfit < worstTradeNanoton) worstTradeNanoton = result.netProfit;
     }
 
     if (result.netProfitUsd !== null) {
@@ -201,7 +207,9 @@ export function aggregateStats(
     totalProfitNanoton: hasNanoton ? (totalNanoton as NanoTon) : null,
     totalProfitUsd: hasUsd ? totalUsd : null,
     winRate: closed > 0 ? (wins / closed) * 100 : null,
-    bestTrade,
-    worstTrade,
+    bestTradeStars,
+    worstTradeStars,
+    bestTradeNanoton,
+    worstTradeNanoton,
   };
 }

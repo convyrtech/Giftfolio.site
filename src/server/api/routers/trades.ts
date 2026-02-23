@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { and, eq, isNull, isNotNull, desc, asc, lt, gt, inArray, sql } from "drizzle-orm";
-import { router, protectedProcedure } from "../trpc";
+import { and, eq, isNull, isNotNull, desc, inArray, sql } from "drizzle-orm";
+import { router, protectedProcedure, rateLimitedProcedure } from "../trpc";
 import { trades, type Trade, userSettings } from "@/server/db/schema";
 import { parseGiftUrl, getGiftTelegramUrl } from "@/lib/gift-parser";
 import { getTonUsdRate, getStarsUsdRate } from "@/lib/exchange-rates";
@@ -49,7 +49,10 @@ export const tradesRouter = router({
   list: protectedProcedure
     .input(
       z.object({
-        cursor: z.coerce.bigint().optional(),
+        cursor: z.object({
+          id: z.coerce.bigint(),
+          sortValue: z.string(),
+        }).optional(),
         limit: z.number().int().min(1).max(100).default(50),
         sort: z.enum(sortColumns).default("buy_date"),
         sortDir: z.enum(["asc", "desc"]).default("desc"),
@@ -74,25 +77,58 @@ export const tradesRouter = router({
         conditions.push(eq(trades.tradeCurrency, currency));
       }
 
-      // Cursor pagination: fetch items after cursor ID
-      if (cursor) {
-        conditions.push(
-          sortDir === "desc" ? lt(trades.id, cursor) : gt(trades.id, cursor),
-        );
-      }
+      const sortColKey = sort === "buy_date" ? "buyDate" : sort === "sell_date" ? "sellDate" : sort === "buy_price" ? "buyPrice" : sort === "sell_price" ? "sellPrice" : "createdAt";
+      const sortCol = trades[sortColKey];
+      const isDateCol = sortColKey === "buyDate" || sortColKey === "sellDate" || sortColKey === "createdAt";
+      const isNullableCol = sortColKey === "sellDate" || sortColKey === "sellPrice";
 
-      const sortCol = trades[sort === "buy_date" ? "buyDate" : sort === "sell_date" ? "sellDate" : sort === "buy_price" ? "buyPrice" : sort === "sell_price" ? "sellPrice" : "createdAt"];
+      // For nullable columns, COALESCE to push NULLs to the end (NULLS LAST behavior)
+      const sortExpr = isNullableCol
+        ? (isDateCol
+            ? sql`COALESCE(${sortCol}, '9999-12-31T23:59:59Z'::timestamptz)`
+            : sql`COALESCE(${sortCol}, ${BigInt("9223372036854775807")}::bigint)`)
+        : sortCol;
+
+      // Compound cursor: (sortExpr, id) for correct pagination on non-unique sort columns
+      if (cursor) {
+        const cursorSortVal = isDateCol
+          ? sql`${new Date(cursor.sortValue)}::timestamptz`
+          : sql`${BigInt(cursor.sortValue)}::bigint`;
+
+        if (sortDir === "desc") {
+          conditions.push(
+            sql`(${sortExpr}, ${trades.id}) < (${cursorSortVal}, ${cursor.id})`,
+          );
+        } else {
+          conditions.push(
+            sql`(${sortExpr}, ${trades.id}) > (${cursorSortVal}, ${cursor.id})`,
+          );
+        }
+      }
 
       const items = await ctx.db
         .select()
         .from(trades)
         .where(and(...conditions))
-        .orderBy(sortDir === "desc" ? desc(sortCol) : asc(sortCol), desc(trades.id))
+        .orderBy(
+          sortDir === "desc" ? sql`${sortExpr} DESC` : sql`${sortExpr} ASC`,
+          desc(trades.id),
+        )
         .limit(limit + 1); // +1 to check if there are more
 
       const hasMore = items.length > limit;
       const data = hasMore ? items.slice(0, limit) : items;
-      const nextCursor = hasMore && data.length > 0 ? data[data.length - 1]!.id : undefined;
+
+      let nextCursor: { id: bigint; sortValue: string } | undefined;
+      if (hasMore && data.length > 0) {
+        const lastItem = data[data.length - 1]!;
+        const lastSortVal = lastItem[sortColKey];
+        // For NULL values, use the same sentinel as COALESCE to keep cursor consistent
+        const serialized = lastSortVal == null
+          ? (isDateCol ? "9999-12-31T23:59:59Z" : "9223372036854775807")
+          : (lastSortVal instanceof Date ? lastSortVal.toISOString() : String(lastSortVal));
+        nextCursor = { id: lastItem.id, sortValue: serialized };
+      }
 
       return { data, nextCursor };
     }),
@@ -110,7 +146,7 @@ export const tradesRouter = router({
       return trade ?? null;
     }),
 
-  add: protectedProcedure.input(tradeInput).mutation(async ({ ctx, input }) => {
+  add: rateLimitedProcedure.input(tradeInput).mutation(async ({ ctx, input }) => {
     const userId = ctx.user.id;
 
     // Determine gift identification (item mode vs collection mode)
@@ -208,7 +244,7 @@ export const tradesRouter = router({
     return trade;
   }),
 
-  update: protectedProcedure
+  update: rateLimitedProcedure
     .input(
       z.object({
         id: z.coerce.bigint(),
@@ -299,7 +335,7 @@ export const tradesRouter = router({
       return updated;
     }),
 
-  softDelete: protectedProcedure
+  softDelete: rateLimitedProcedure
     .input(z.object({ id: z.coerce.bigint() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
@@ -323,7 +359,7 @@ export const tradesRouter = router({
       return { success: true };
     }),
 
-  restore: protectedProcedure
+  restore: rateLimitedProcedure
     .input(z.object({ id: z.coerce.bigint() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
@@ -344,7 +380,7 @@ export const tradesRouter = router({
       return { success: true };
     }),
 
-  bulkUpdate: protectedProcedure
+  bulkUpdate: rateLimitedProcedure
     .input(
       z.object({
         ids: z.array(z.coerce.bigint()).min(1).max(500),
@@ -354,7 +390,10 @@ export const tradesRouter = router({
         excludeFromPnl: z.boolean().optional(),
         commissionFlatStars: z.coerce.bigint().min(0n).optional(),
         commissionPermille: z.number().int().min(0).max(1000).optional(),
-      }),
+      }).refine(
+        (d) => (d.sellDate !== undefined) === (d.sellPrice !== undefined),
+        { message: "sellDate and sellPrice must both be provided together in bulk updates" },
+      ),
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
@@ -414,7 +453,7 @@ export const tradesRouter = router({
       return { count: updated.length };
     }),
 
-  bulkDelete: protectedProcedure
+  bulkDelete: rateLimitedProcedure
     .input(z.object({ ids: z.array(z.coerce.bigint()).min(1).max(500) }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
@@ -434,7 +473,7 @@ export const tradesRouter = router({
       return { count: deleted.length };
     }),
 
-  toggleHidden: protectedProcedure
+  toggleHidden: rateLimitedProcedure
     .input(z.object({ id: z.coerce.bigint() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;

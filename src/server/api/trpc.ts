@@ -4,6 +4,7 @@ import { cache } from "react";
 import { headers } from "next/headers";
 import { db } from "@/server/db";
 import { auth } from "@/server/auth";
+import { mutationRateLimit } from "@/lib/rate-limit";
 
 export const createTRPCContext = cache(async () => {
   const headersList = await headers();
@@ -39,4 +40,14 @@ export const protectedProcedure = t.procedure.use(async (opts) => {
       user: ctx.session.user,
     },
   });
+});
+
+/** Protected procedure with rate limiting for mutations (30/min per user) */
+export const rateLimitedProcedure = protectedProcedure.use(async (opts) => {
+  const { ctx } = opts;
+  const { success } = await mutationRateLimit.limit(ctx.user.id);
+  if (!success) {
+    throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Rate limit exceeded" });
+  }
+  return opts.next();
 });

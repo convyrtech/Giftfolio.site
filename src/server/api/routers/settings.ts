@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
-import { router, protectedProcedure } from "../trpc";
+import { router, protectedProcedure, rateLimitedProcedure } from "../trpc";
 import { userSettings, type UserSetting } from "@/server/db/schema";
 
 const ianaTimezone = z.string().max(50).refine(
@@ -24,11 +24,17 @@ export const settingsRouter = router({
       .where(eq(userSettings.userId, ctx.user.id));
 
     if (!settings) {
-      // Create default settings if missing (shouldn't happen after auth setup)
-      const [created] = await ctx.db
+      // Create default settings if missing — ON CONFLICT handles concurrent race
+      await ctx.db
         .insert(userSettings)
         .values({ userId: ctx.user.id })
-        .returning();
+        .onConflictDoNothing({ target: userSettings.userId });
+
+      const [created] = await ctx.db
+        .select()
+        .from(userSettings)
+        .where(eq(userSettings.userId, ctx.user.id));
+
       if (!created) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create settings" });
       }
@@ -38,7 +44,7 @@ export const settingsRouter = router({
     return settings;
   }),
 
-  update: protectedProcedure
+  update: rateLimitedProcedure
     .input(
       z.object({
         defaultCommissionStars: z.coerce.bigint().min(0n).optional(),

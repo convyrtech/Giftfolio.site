@@ -6,6 +6,7 @@ import crypto from "crypto";
 import { env } from "@/env";
 import { db } from "@/server/db";
 import { userSettings } from "@/server/db/schema";
+import { authRateLimit } from "@/lib/rate-limit";
 
 /** Type guard for Better Auth adapter results that have an `id` field. */
 function assertHasId(value: unknown): asserts value is { id: string } {
@@ -47,19 +48,24 @@ export const telegramPlugin = () => {
           body: telegramAuthSchema,
         },
         async (ctx) => {
-          const { body } = ctx;
-
-          // Verify Telegram auth data
-          const botToken = env.TELEGRAM_BOT_TOKEN;
-
-          if (!verifyTelegramAuth(body, botToken)) {
-            return ctx.json({ error: "Invalid Telegram auth data" }, { status: 401 });
+          // Rate limit by IP (5 per minute)
+          const ip = ctx.request?.headers?.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+          const { success } = await authRateLimit.limit(ip);
+          if (!success) {
+            return ctx.json({ error: "Too many requests" }, { status: 429 });
           }
 
-          // Check auth_date is not too old (24 hours)
+          const { body } = ctx;
+          const botToken = env.TELEGRAM_BOT_TOKEN;
+
+          // Check freshness first (cheap) before HMAC verification (expensive)
           const now = Math.floor(Date.now() / 1000);
           if (now - body.auth_date > 86400) {
             return ctx.json({ error: "Auth data expired" }, { status: 401 });
+          }
+
+          if (!verifyTelegramAuth(body, botToken)) {
+            return ctx.json({ error: "Invalid Telegram auth data" }, { status: 401 });
           }
 
           const telegramId = String(body.id);
