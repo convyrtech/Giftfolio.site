@@ -40,6 +40,15 @@ When fixing a bug, ALWAYS search the entire codebase for the same pattern before
 - Missing `.limit()` on export queries → add `MAX_EXPORT_ROWS` constant
 - Duplicate async calls (e.g. rate fetch) → deduplicate into single variable
 
+## Self-Review Protocol (MANDATORY)
+After EVERY phase/feature, before commit:
+1. Launch `code-reviewer` agent on ALL changed files — no exceptions
+2. Fix every CRITICAL and WARNING finding (or document why it's a false positive)
+3. After multi-phase work: run cross-phase review on cumulative diff
+4. Never skip review "because it's a small change" — small changes have big bugs
+5. Check specifically: unused imports, missing null guards, aria/a11y, type safety at boundaries
+6. Verification chain: `npx tsc --noEmit && npm run lint && npm test && npm run build`
+
 ## Styling
 - Tailwind classes only — NEVER inline styles or CSS modules
 - Use `cn()` utility for conditional classes
