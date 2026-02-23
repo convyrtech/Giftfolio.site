@@ -21,7 +21,7 @@ export default function TradesPage(): React.ReactElement {
   const selectedIds = useMemo(
     () =>
       Object.keys(rowSelection)
-        .filter((key) => rowSelection[key])
+        .filter((key): key is string => rowSelection[key] === true)
         .map((id) => BigInt(id)),
     [rowSelection],
   );

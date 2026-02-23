@@ -80,9 +80,11 @@ export function GiftNameCombobox({
                     )}
                   />
                   <span className="flex-1 truncate">{gift.displayName}</span>
-                  <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-                    {formatStars(BigInt(gift.floorStars) as Stars)}
-                  </span>
+                  {gift.floorStars > 0 && (
+                    <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                      {formatStars(BigInt(gift.floorStars) as Stars)}
+                    </span>
+                  )}
                 </CommandItem>
               ))}
             </CommandGroup>

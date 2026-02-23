@@ -34,32 +34,30 @@ export function CommissionOverrideSection({
         <ChevronDown className={cn("h-3 w-3 transition-transform", expanded && "rotate-180")} />
         Commission override
       </button>
-      {expanded && (
-        <div id="commission-override-content" className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <Label htmlFor="commFlat" className="text-xs">Flat (Stars)</Label>
-            <Input
-              id="commFlat"
-              type="text"
-              inputMode="numeric"
-              placeholder="0"
-              value={flat}
-              onChange={(e) => onFlatChange(e.target.value.replace(/[^0-9]/g, ""))}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="commPermille" className="text-xs">Permille (0-1000)</Label>
-            <Input
-              id="commPermille"
-              type="text"
-              inputMode="numeric"
-              placeholder="0"
-              value={permille}
-              onChange={(e) => onPermilleChange(e.target.value.replace(/[^0-9]/g, ""))}
-            />
-          </div>
+      <div id="commission-override-content" className={cn("grid grid-cols-2 gap-3", !expanded && "hidden")}>
+        <div className="space-y-1">
+          <Label htmlFor="commFlat" className="text-xs">Flat (Stars)</Label>
+          <Input
+            id="commFlat"
+            type="text"
+            inputMode="numeric"
+            placeholder="0"
+            value={flat}
+            onChange={(e) => onFlatChange(e.target.value.replace(/[^0-9]/g, ""))}
+          />
         </div>
-      )}
+        <div className="space-y-1">
+          <Label htmlFor="commPermille" className="text-xs">Permille (0-1000)</Label>
+          <Input
+            id="commPermille"
+            type="text"
+            inputMode="numeric"
+            placeholder="0"
+            value={permille}
+            onChange={(e) => onPermilleChange(e.target.value.replace(/[^0-9]/g, ""))}
+          />
+        </div>
+      </div>
     </div>
   );
 }

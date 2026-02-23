@@ -47,6 +47,7 @@ export function TradesTable({
   const [deleteTrade, setDeleteTrade] = useState<Trade | null>(null);
   const utils = trpc.useUtils();
 
+  // Cap in-memory pages to prevent unbounded growth (50 items × 20 pages = 1,000 trades max)
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     trpc.trades.list.useInfiniteQuery(
       { limit: 50, currency, sort, sortDir, showHidden },
