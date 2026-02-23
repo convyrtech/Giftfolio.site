@@ -1,33 +1,37 @@
--- Migration: Add quantity, is_hidden, exclude_from_pnl columns
--- Also make gift_link and gift_number nullable for collection mode
+-- Migration: Phase 7A audit fixes
+-- 1. Fix unique index to include gift_number (C-4)
+-- 2. Add CHECK constraints (C-5, sellDate/sellPrice pairing)
+-- 3. Fix rounding in VIEW (C-1)
 
--- 1. New columns
-ALTER TABLE trades
-  ADD COLUMN quantity smallint NOT NULL DEFAULT 1,
-  ADD COLUMN is_hidden boolean NOT NULL DEFAULT false,
-  ADD COLUMN exclude_from_pnl boolean NOT NULL DEFAULT false;
-
--- 2. Make gift_link and gift_number nullable (for collections without individual gift URL)
-ALTER TABLE trades
-  ALTER COLUMN gift_link DROP NOT NULL,
-  ALTER COLUMN gift_number DROP NOT NULL;
-
--- 3. Constraints
-ALTER TABLE trades
-  ADD CONSTRAINT chk_quantity_range CHECK (quantity >= 1 AND quantity <= 9999);
-
--- 4. Drop old unique index and recreate with gift_number IS NOT NULL filter
+-- 1. Recreate unique index with gift_number
 DROP INDEX IF EXISTS uq_trades_user_gift_open;
 CREATE UNIQUE INDEX uq_trades_user_gift_open
-  ON trades (user_id, gift_slug)
+  ON trades (user_id, gift_slug, gift_number)
   WHERE sell_date IS NULL AND deleted_at IS NULL AND gift_number IS NOT NULL;
 
--- 5. Index for hidden trades filter
-CREATE INDEX idx_trades_hidden
-  ON trades (user_id, is_hidden)
-  WHERE deleted_at IS NULL;
+-- 2. Add CHECK constraints (skip if already exist)
+DO $$ BEGIN
+  ALTER TABLE trades ADD CONSTRAINT chk_trade_currency
+    CHECK (trade_currency IN ('STARS', 'TON'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- 6. Recreate VIEW with quantity multiplication
+DO $$ BEGIN
+  ALTER TABLE trades ADD CONSTRAINT chk_ton_no_flat
+    CHECK (trade_currency != 'TON' OR commission_flat_stars = 0);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE trades ADD CONSTRAINT chk_sell_date_price_pair
+    CHECK (
+      (sell_date IS NULL AND sell_price IS NULL)
+      OR (sell_date IS NOT NULL AND sell_price IS NOT NULL)
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- 3. Recreate VIEW with FLOOR(x + 0.5) instead of ROUND() for half-up rounding consistency
 CREATE OR REPLACE VIEW trade_profits AS
 SELECT
   t.id,

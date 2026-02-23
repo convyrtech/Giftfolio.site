@@ -51,8 +51,8 @@ export const statsRouter = router({
           closedTrades: sql<number>`sum(${trades.quantity})::int`.mapWith(Number),
           totalBuy: sql<bigint>`coalesce(sum(${trades.buyPrice} * ${trades.quantity}), 0)`.mapWith(BigInt),
           totalSell: sql<bigint>`coalesce(sum(${trades.sellPrice} * ${trades.quantity}), 0)`.mapWith(BigInt),
-          totalCommissionFlat: sql<bigint>`coalesce(sum(${trades.commissionFlatStars} * ${trades.quantity}), 0)`.mapWith(BigInt),
-          totalPermilleCommission: sql<bigint>`coalesce(sum(ROUND(${trades.sellPrice} * ${trades.commissionPermille} / 1000.0) * ${trades.quantity}), 0)`.mapWith(BigInt),
+          totalCommissionFlat: sql<bigint>`coalesce(sum(CASE WHEN ${trades.tradeCurrency} = 'STARS' THEN ${trades.commissionFlatStars} * ${trades.quantity} ELSE 0 END), 0)`.mapWith(BigInt),
+          totalPermilleCommission: sql<bigint>`coalesce(sum(FLOOR(${trades.sellPrice} * ${trades.commissionPermille} / 1000.0 + 0.5) * ${trades.quantity}), 0)`.mapWith(BigInt),
         })
         .from(trades)
         .where(and(...pnlConditions))

@@ -13,12 +13,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Drawer,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
@@ -68,6 +70,9 @@ export function TradeFormDialog({
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{isEdit ? "Edit trade" : "Add trade"}</DialogTitle>
+            <DialogDescription className="sr-only">
+              {isEdit ? "Edit trade details" : "Enter new trade details"}
+            </DialogDescription>
           </DialogHeader>
           <TradeForm trade={trade} onSuccess={() => onOpenChange(false)} />
         </DialogContent>
@@ -80,6 +85,9 @@ export function TradeFormDialog({
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>{isEdit ? "Edit trade" : "Add trade"}</DrawerTitle>
+          <DrawerDescription className="sr-only">
+            {isEdit ? "Edit trade details" : "Enter new trade details"}
+          </DrawerDescription>
         </DrawerHeader>
         <div className="px-4 pb-6">
           <TradeForm trade={trade} onSuccess={() => onOpenChange(false)} />

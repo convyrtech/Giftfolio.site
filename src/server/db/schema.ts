@@ -177,8 +177,8 @@ export const trades = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    // Prevent duplicate open positions for same gift by same user (individual items only)
-    uniqueIndex("uq_trades_user_gift_open").on(table.userId, table.giftSlug).where(
+    // Prevent duplicate open positions for same numbered gift by same user
+    uniqueIndex("uq_trades_user_gift_open").on(table.userId, table.giftSlug, table.giftNumber).where(
       sql`${table.sellDate} IS NULL AND ${table.deletedAt} IS NULL AND ${table.giftNumber} IS NOT NULL`,
     ),
     // Fast lookup for hidden trades filter
@@ -204,6 +204,18 @@ export const trades = pgTable(
     check(
       "chk_commission_permille_range",
       sql`${table.commissionPermille} >= 0 AND ${table.commissionPermille} <= 1000`,
+    ),
+    check(
+      "chk_trade_currency",
+      sql`${table.tradeCurrency} IN ('STARS', 'TON')`,
+    ),
+    check(
+      "chk_ton_no_flat",
+      sql`${table.tradeCurrency} != 'TON' OR ${table.commissionFlatStars} = 0`,
+    ),
+    check(
+      "chk_sell_date_price_pair",
+      sql`(${table.sellDate} IS NULL AND ${table.sellPrice} IS NULL) OR (${table.sellDate} IS NOT NULL AND ${table.sellPrice} IS NOT NULL)`,
     ),
   ],
 );

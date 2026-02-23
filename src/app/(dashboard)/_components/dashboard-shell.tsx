@@ -31,11 +31,12 @@ export function DashboardShell({ user, children }: DashboardShellProps): React.R
               <Gift className="h-5 w-5 text-primary" />
               <span>Giftfolio</span>
             </Link>
-            <nav className="hidden items-center gap-1 md:flex">
+            <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={pathname.startsWith(item.href) ? "page" : undefined}
                   className={cn(
                     buttonVariants({
                       variant: pathname.startsWith(item.href) ? "secondary" : "ghost",
@@ -57,7 +58,7 @@ export function DashboardShell({ user, children }: DashboardShellProps): React.R
             {user.image && (
               <Image
                 src={user.image}
-                alt=""
+                alt={user.name ?? "User avatar"}
                 width={32}
                 height={32}
                 className="rounded-full"
@@ -69,6 +70,7 @@ export function DashboardShell({ user, children }: DashboardShellProps): React.R
               size="icon"
               className="h-8 w-8 min-h-[44px] min-w-[44px]"
               onClick={() => void authClient.signOut()}
+              aria-label="Sign out"
             >
               <LogOut className="h-4 w-4" />
             </Button>
@@ -82,12 +84,13 @@ export function DashboardShell({ user, children }: DashboardShellProps): React.R
       </main>
 
       {/* Mobile bottom nav — safe-area for iPhone notch */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)] md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)] md:hidden" aria-label="Mobile navigation">
         <div className="flex h-14 items-center justify-around">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
+              aria-current={pathname.startsWith(item.href) ? "page" : undefined}
               className={cn(
                 "flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-0.5 px-4 text-xs",
                 pathname.startsWith(item.href)

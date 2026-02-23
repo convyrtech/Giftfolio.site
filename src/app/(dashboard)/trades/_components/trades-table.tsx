@@ -101,7 +101,7 @@ export function TradesTable({
   return (
     <div>
       <div className="rounded-md border">
-        <Table>
+        <Table aria-label="Trades list">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -143,8 +143,9 @@ export function TradesTable({
       <div ref={loadMoreRef} className="h-1" />
 
       {isFetchingNextPage && (
-        <div className="flex justify-center py-4">
+        <div className="flex justify-center py-4" role="status" aria-live="polite">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <span className="sr-only">Loading more trades</span>
         </div>
       )}
     </div>

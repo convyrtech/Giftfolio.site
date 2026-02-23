@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { router, protectedProcedure } from "../trpc";
 import { userSettings, type UserSetting } from "@/server/db/schema";
 
-const ianaTimezone = z.string().refine(
+const ianaTimezone = z.string().max(50).refine(
   (tz) => {
     try {
       Intl.DateTimeFormat(undefined, { timeZone: tz });
@@ -28,7 +29,10 @@ export const settingsRouter = router({
         .insert(userSettings)
         .values({ userId: ctx.user.id })
         .returning();
-      return created!;
+      if (!created) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create settings" });
+      }
+      return created;
     }
 
     return settings;

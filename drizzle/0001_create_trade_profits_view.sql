@@ -25,7 +25,7 @@ SELECT
     WHEN t.trade_currency = 'STARS' AND t.sell_price IS NOT NULL THEN
       t.sell_price - t.buy_price
         - t.commission_flat_stars
-        - ROUND(t.sell_price * t.commission_permille / 1000.0)
+        - FLOOR(t.sell_price * t.commission_permille / 1000.0 + 0.5)
     ELSE NULL
   END AS net_profit_stars,
 
@@ -34,7 +34,7 @@ SELECT
   CASE
     WHEN t.trade_currency = 'TON' AND t.sell_price IS NOT NULL THEN
       t.sell_price - t.buy_price
-        - ROUND(t.sell_price * t.commission_permille / 1000.0)
+        - FLOOR(t.sell_price * t.commission_permille / 1000.0 + 0.5)
     ELSE NULL
   END AS net_profit_nanoton,
 
@@ -66,11 +66,11 @@ SELECT
           (t.sell_price * t.sell_rate_usd)
           - (t.buy_price * t.buy_rate_usd)
           - (t.commission_flat_stars * t.sell_rate_usd)
-          - ROUND(t.sell_price * t.commission_permille / 1000.0) * t.sell_rate_usd
+          - FLOOR(t.sell_price * t.commission_permille / 1000.0 + 0.5) * t.sell_rate_usd
         WHEN t.trade_currency = 'TON' THEN
           ((t.sell_price / 1000000000.0) * t.sell_rate_usd)
           - ((t.buy_price / 1000000000.0) * t.buy_rate_usd)
-          - (ROUND(t.sell_price * t.commission_permille / 1000.0) / 1000000000.0) * t.sell_rate_usd
+          - (FLOOR(t.sell_price * t.commission_permille / 1000.0 + 0.5) / 1000000000.0) * t.sell_rate_usd
       END
     ELSE NULL
   END AS net_profit_usd

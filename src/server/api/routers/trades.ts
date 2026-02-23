@@ -25,15 +25,24 @@ const tradeInput = z.object({
   excludeFromPnl: z.boolean().default(false),
   notes: z.string().max(1000).optional(),
   // Gift attributes (optional, from API)
-  attrModel: z.string().optional(),
-  attrBackdrop: z.string().optional(),
-  attrSymbol: z.string().optional(),
-  attrModelRarity: z.string().optional(),
-  attrBackdropRarity: z.string().optional(),
-  attrSymbolRarity: z.string().optional(),
+  attrModel: z.string().max(100).optional(),
+  attrBackdrop: z.string().max(100).optional(),
+  attrSymbol: z.string().max(100).optional(),
+  attrModelRarity: z.string().max(50).optional(),
+  attrBackdropRarity: z.string().max(50).optional(),
+  attrSymbolRarity: z.string().max(50).optional(),
 }).refine(
   (data) => data.giftUrl || data.giftName,
   { message: "Either giftUrl or giftName is required" },
+).refine(
+  (data) => !data.sellDate || data.sellPrice !== undefined,
+  { message: "sellPrice is required when sellDate is set", path: ["sellPrice"] },
+).refine(
+  (data) => data.sellPrice === undefined || data.sellDate,
+  { message: "sellDate is required when sellPrice is set", path: ["sellDate"] },
+).refine(
+  (data) => !data.sellDate || !data.buyDate || data.sellDate >= data.buyDate,
+  { message: "Sell date cannot be before buy date", path: ["sellDate"] },
 );
 
 export const tradesRouter = router({
@@ -96,7 +105,7 @@ export const tradesRouter = router({
       const [trade] = await ctx.db
         .select()
         .from(trades)
-        .where(and(eq(trades.id, input.id), eq(trades.userId, userId)));
+        .where(and(eq(trades.id, input.id), eq(trades.userId, userId), isNull(trades.deletedAt)));
 
       return trade ?? null;
     }),
@@ -192,7 +201,11 @@ export const tradesRouter = router({
       })
       .returning();
 
-    return trade!;
+    if (!trade) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create trade" });
+    }
+
+    return trade;
   }),
 
   update: protectedProcedure
@@ -217,7 +230,7 @@ export const tradesRouter = router({
       const [existing] = await ctx.db
         .select()
         .from(trades)
-        .where(and(eq(trades.id, input.id), eq(trades.userId, userId)));
+        .where(and(eq(trades.id, input.id), eq(trades.userId, userId), isNull(trades.deletedAt)));
 
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Trade not found" });
@@ -266,10 +279,14 @@ export const tradesRouter = router({
       const [updated] = await ctx.db
         .update(trades)
         .set(updateData)
-        .where(and(eq(trades.id, input.id), eq(trades.userId, userId)))
+        .where(and(eq(trades.id, input.id), eq(trades.userId, userId), isNull(trades.deletedAt)))
         .returning();
 
-      return updated!;
+      if (!updated) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Trade not found" });
+      }
+
+      return updated;
     }),
 
   softDelete: protectedProcedure
@@ -345,30 +362,34 @@ export const tradesRouter = router({
         updateData.sellDate = fields.sellDate;
       }
 
-      // If setting sellDate, split by currency for correct rate locking
+      // If setting sellDate, split by currency for correct rate locking (in transaction)
       if (fields.sellDate !== undefined) {
         const starsRate = getStarsUsdRate().toString();
         const tonRate = (await getTonUsdRate())?.toString() ?? null;
 
-        const baseWhere = and(
-          inArray(trades.id, ids),
-          eq(trades.userId, userId),
-          isNull(trades.deletedAt),
-        );
+        const result = await ctx.db.transaction(async (tx) => {
+          const baseWhere = and(
+            inArray(trades.id, ids),
+            eq(trades.userId, userId),
+            isNull(trades.deletedAt),
+          );
 
-        const starsUpdated = await ctx.db
-          .update(trades)
-          .set({ ...updateData, sellRateUsd: starsRate })
-          .where(and(baseWhere, eq(trades.tradeCurrency, "STARS")))
-          .returning({ id: trades.id });
+          const starsUpdated = await tx
+            .update(trades)
+            .set({ ...updateData, sellRateUsd: starsRate })
+            .where(and(baseWhere, eq(trades.tradeCurrency, "STARS")))
+            .returning({ id: trades.id });
 
-        const tonUpdated = await ctx.db
-          .update(trades)
-          .set({ ...updateData, sellRateUsd: tonRate })
-          .where(and(baseWhere, eq(trades.tradeCurrency, "TON")))
-          .returning({ id: trades.id });
+          const tonUpdated = await tx
+            .update(trades)
+            .set({ ...updateData, sellRateUsd: tonRate })
+            .where(and(baseWhere, eq(trades.tradeCurrency, "TON")))
+            .returning({ id: trades.id });
 
-        return { count: starsUpdated.length + tonUpdated.length };
+          return starsUpdated.length + tonUpdated.length;
+        });
+
+        return { count: result };
       }
 
       const updated = await ctx.db
@@ -418,7 +439,7 @@ export const tradesRouter = router({
           isHidden: sql`NOT ${trades.isHidden}`,
           updatedAt: new Date(),
         })
-        .where(and(eq(trades.id, input.id), eq(trades.userId, userId)))
+        .where(and(eq(trades.id, input.id), eq(trades.userId, userId), isNull(trades.deletedAt)))
         .returning();
 
       if (!updated) {

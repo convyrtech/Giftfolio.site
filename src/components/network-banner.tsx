@@ -34,7 +34,7 @@ export function NetworkBanner(): React.ReactElement | null {
   if (isOnline) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[100] bg-destructive px-4 py-2 text-center text-sm font-medium text-destructive-foreground">
+    <div role="alert" className="fixed top-0 left-0 right-0 z-[100] bg-destructive px-4 py-2 text-center text-sm font-medium text-destructive-foreground">
       <WifiOff className="mr-2 inline-block h-4 w-4" />
       No connection — changes won&apos;t be saved
     </div>

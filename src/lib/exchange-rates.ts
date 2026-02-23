@@ -1,4 +1,10 @@
+import { z } from "zod";
 import { STARS_USD_RATE } from "./currencies";
+
+const binancePriceSchema = z.object({ price: z.string() });
+const okxPriceSchema = z.object({
+  data: z.array(z.object({ last: z.string() })).min(1),
+});
 
 interface RateCache {
   rate: number;
@@ -38,7 +44,7 @@ async function fetchBinanceTonRate(): Promise<number> {
     signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) throw new Error(`Binance HTTP ${res.status}`);
-  const data = (await res.json()) as { price: string };
+  const data = binancePriceSchema.parse(await res.json());
   const rate = parseFloat(data.price);
   if (isNaN(rate) || rate <= 0) throw new Error("Binance invalid price");
   return rate;
@@ -49,11 +55,8 @@ async function fetchOkxTonRate(): Promise<number> {
     signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) throw new Error(`OKX HTTP ${res.status}`);
-  const data = (await res.json()) as { data?: Array<{ last: string }> };
-  if (!Array.isArray(data.data) || data.data.length === 0) {
-    throw new Error("OKX invalid response structure");
-  }
-  const rate = parseFloat(data.data[0].last);
+  const data = okxPriceSchema.parse(await res.json());
+  const rate = parseFloat(data.data[0]!.last);
   if (isNaN(rate) || rate <= 0) throw new Error("OKX invalid price");
   return rate;
 }

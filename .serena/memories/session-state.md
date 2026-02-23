@@ -1,54 +1,54 @@
-# Session State — 2026-02-22
+# Session State — 2026-02-23
 
 ## Current Task
-Phase 6 complete. Collections, bulk actions, trade enhancements all implemented.
+Phase 7A critical fixes — COMPLETE
 
-## Completed
-- Phase 1: Scaffold + Tooling (ae45ffd)
-- Phase 2: DB Schema, PnL Engine, tRPC Routers (74c5f81)
-- Phase 3: Authentication — Better Auth + Telegram Login (39ce01f)
-- Phase 4: UI — Table & Dashboard (4611f77)
-- Phase 5: Polish & Deploy (42d0cab)
-- Phase 5 review fix 1: cache stampede, ROUND(), BigInt safety (507806b)
-- Phase 5 review fix 2: subscribe stability, safe-area, Docker (00996ba)
-- Phase 6: Collections, Bulk Actions & Trade Enhancements (not yet committed)
+## Completed This Session
+1. Compiled 14 audit agent results into `docs/plans/2026-02-23-zero-trust-audit.md`
+2. Launched 8 pattern-scanning agents — found 103 bugs total (32 HIGH, 33 MED, 38 LOW)
+3. Created `docs/plans/2026-02-23-fix-checklist.md` with every instance of each bug class
+4. Implemented Phase 7A fixes (all verified: tsc 0 errors, lint 0 errors, 86/86 tests pass, build success):
 
-## Phase 6 Changes
-### Backend:
-- `src/server/db/schema.ts` — quantity, is_hidden, exclude_from_pnl columns; nullable giftLink/giftNumber; updated unique index
-- `drizzle/0002_add_quantity_columns.sql` — migration + VIEW update with quantity multiplication
-- `src/lib/pnl-engine.ts` — quantity support (multiply netProfit by qty, percent stays per-unit)
-- `src/server/api/routers/trades.ts` — collection mode (giftName without URL), bulkUpdate/bulkDelete/toggleHidden, showHidden filter
-- `src/server/api/routers/stats.ts` — quantity in all aggregations (sum * quantity)
+### Phase 7A Fixes Applied
+- **C-3: deletedAt** — added `isNull(trades.deletedAt)` to getById, update (SELECT+UPDATE), toggleHidden
+- **C-4: Unique index** — added `giftNumber` to `uq_trades_user_gift_open` index  
+- **C-5: CHECK constraints** — added `chk_trade_currency`, `chk_ton_no_flat`, `chk_sell_date_price_pair`
+- **C-1: Rounding** — changed SQL ROUND() to FLOOR(x+0.5) in 0001, 0002 migrations + stats.ts
+- **H-3: Transaction** — wrapped bulkUpdate currency-split in `db.transaction()`
+- **H-5: Stats flat for TON** — CASE WHEN to only sum flat for STARS trades
+- **H-6: Date validation** — added `.refine()` for sellDate >= buyDate + sellDate/sellPrice pairing
+- **H-8: telegram-plugin** — replaced `as any` and `as {id}` with `assertHasId()` type guard
+- **H-9: Non-null** — replaced `trade!` and `created!` with proper null checks + TRPCError
+- **M-2: Zod .max()** — added .max() to all 16 unbounded string fields (trades, telegram, settings)
+- **M-6: API validation** — replaced `as {price}` with Zod schemas for Binance/OKX
+- **H-15: A11y** — DialogDescription, Table aria-label, spinner role=status, logout aria-label, network-banner role=alert, nav aria-label/aria-current, avatar alt text
+- Created migration `drizzle/0003_audit_fixes.sql`
 
-### Frontend:
-- `columns.tsx` — checkbox column, qty badge, collection mode display, hidden row opacity
-- `trades-table.tsx` — row selection state, hidden row styling
-- `bulk-actions-bar.tsx` — NEW: floating bar with sell price, hide/unhide, don't count, delete
-- `trade-form-dialog.tsx` — Item/Collection mode toggle, quantity input, commission override, excludeFromPnl
-- `trades-toolbar.tsx` — showHidden toggle (Eye icon)
-- `trade-row-actions.tsx` — hide/unhide, don't count menu items
-- `page.tsx` — lifted rowSelection + showHidden state
-- `delete-trade-dialog.tsx` — handle nullable giftNumber
+## Modified Files
+- `src/server/api/routers/trades.ts`
+- `src/server/api/routers/stats.ts`
+- `src/server/api/routers/settings.ts`
+- `src/server/db/schema.ts`
+- `src/server/auth/telegram-plugin.ts`
+- `src/lib/exchange-rates.ts`
+- `src/lib/pnl-engine.ts` (no changes needed — half-up is correct)
+- `drizzle/0001_create_trade_profits_view.sql`
+- `drizzle/0002_add_quantity_columns.sql`
+- `drizzle/0003_audit_fixes.sql` (NEW)
+- `src/app/(dashboard)/trades/_components/trade-form-dialog.tsx`
+- `src/app/(dashboard)/trades/_components/trades-table.tsx`
+- `src/app/(dashboard)/_components/dashboard-shell.tsx`
+- `src/components/network-banner.tsx`
+- `docs/plans/2026-02-23-zero-trust-audit.md` (NEW)
+- `docs/plans/2026-02-23-fix-checklist.md` (NEW)
 
-### Tests:
-- 6 new pnl-engine tests for quantity (86/86 total)
-- Installed shadcn checkbox component
-
-## Build Status
-- TypeScript: 0 errors
-- ESLint: 0 errors (1 expected TanStack Table warning)
-- Tests: 86/86 passing
-- Build: success (Next.js 16.1.6 Turbopack)
+## Next Steps
+- Phase 7B: Rate limiting (H-1), security headers (H-2), health check DB (H-7), cursor pagination (H-10)
+- Phase 7C: Performance — dialogs lift (H-12), virtualization (H-13), export limit, memoize profit
+- Phase 7D: Hardening — noUncheckedIndexedAccess, telegram auth window 5min, CORS
+- Run `drizzle/0003_audit_fixes.sql` on production DB
+- NOT committed yet — user hasn't asked for commit
 
 ## Git State
 - Branch: main
-- Last commit: 00996ba (Phase 5 review fix 2)
-- Phase 6 changes NOT yet committed
-- Remote: https://github.com/convyrtech/Giftfolio.site.git
-
-## Next Steps
-- Commit Phase 6 changes
-- Run migration on DB: `drizzle/0002_add_quantity_columns.sql`
-- Railway deployment
-- Phase 7+ backlog: optimistic updates, charts, bulk import
+- Uncommitted changes: all Phase 7A fixes listed above

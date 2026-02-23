@@ -7,15 +7,27 @@ import { env } from "@/env";
 import { db } from "@/server/db";
 import { userSettings } from "@/server/db/schema";
 
+/** Type guard for Better Auth adapter results that have an `id` field. */
+function assertHasId(value: unknown): asserts value is { id: string } {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    !("id" in value) ||
+    typeof (value as Record<string, unknown>).id !== "string"
+  ) {
+    throw new Error("Adapter returned object without string id");
+  }
+}
+
 const telegramAuthSchema = z.object({
   id: z.number().int().positive(),
-  first_name: z.string().optional(),
-  last_name: z.string().optional(),
-  username: z.string().optional(),
-  photo_url: z.string().optional(),
+  first_name: z.string().max(64).optional(),
+  last_name: z.string().max(64).optional(),
+  username: z.string().max(32).optional(),
+  photo_url: z.string().max(512).url().optional(),
   auth_date: z.number().int().positive(),
   hash: z.string().regex(/^[0-9a-f]{64}$/i),
-  timezone: z.string().optional(),
+  timezone: z.string().max(50).optional(),
 });
 
 /**
@@ -64,7 +76,8 @@ export const telegramPlugin = () => {
 
           if (existingUser) {
             // Update existing user
-            userId = (existingUser as { id: string }).id;
+            assertHasId(existingUser);
+            userId = existingUser.id;
             await ctx.context.adapter.update({
               model: "user",
               where: [{ field: "id", value: userId }],
@@ -91,7 +104,8 @@ export const telegramPlugin = () => {
                   updatedAt: new Date(),
                 },
               });
-              userId = (newUser as { id: string }).id;
+              assertHasId(newUser);
+              userId = newUser.id;
               isNewUser = true;
 
               // Create default user settings via direct Drizzle (not BA adapter)
@@ -101,7 +115,7 @@ export const telegramPlugin = () => {
                 defaultCommissionPermille: 0,
                 defaultCurrency: "STARS",
                 timezone: body.timezone ?? "UTC",
-              });
+              }).onConflictDoNothing();
             } catch {
               // Race condition: another request created the user first (unique constraint)
               const raceUser = await ctx.context.adapter.findOne({
@@ -111,7 +125,8 @@ export const telegramPlugin = () => {
               if (!raceUser) {
                 return ctx.json({ error: "Failed to create user" }, { status: 500 });
               }
-              userId = (raceUser as { id: string }).id;
+              assertHasId(raceUser);
+              userId = raceUser.id;
             }
           }
 
@@ -137,8 +152,11 @@ export const telegramPlugin = () => {
 
           // Set session cookie via Better Auth's official cookie system
           // Handles: correct cookie name (incl. __Secure- prefix), session data cache, dontRememberMe
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await setSessionCookie(ctx, { session, user: user as any });
+          assertHasId(user);
+          await setSessionCookie(ctx, {
+            session,
+            user: user as { id: string; name: string; email: string; emailVerified: boolean; createdAt: Date; updatedAt: Date },
+          });
 
           return ctx.json({
             success: true,
