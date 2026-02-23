@@ -5,7 +5,7 @@
 
 -- 1. Recreate unique index with gift_number
 DROP INDEX IF EXISTS uq_trades_user_gift_open;
-CREATE UNIQUE INDEX uq_trades_user_gift_open
+CREATE UNIQUE INDEX IF NOT EXISTS uq_trades_user_gift_open
   ON trades (user_id, gift_slug, gift_number)
   WHERE sell_date IS NULL AND deleted_at IS NULL AND gift_number IS NOT NULL;
 

@@ -155,7 +155,7 @@ export const telegramPlugin = () => {
           assertHasId(user);
           await setSessionCookie(ctx, {
             session,
-            user: user as { id: string; name: string; email: string; emailVerified: boolean; createdAt: Date; updatedAt: Date },
+            user: user as { id: string; name: string; email: string; emailVerified: boolean; createdAt: Date; updatedAt: Date; image: string | null },
           });
 
           return ctx.json({

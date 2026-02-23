@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { and, eq, isNull, desc, asc, lt, gt, inArray, sql } from "drizzle-orm";
+import { and, eq, isNull, isNotNull, desc, asc, lt, gt, inArray, sql } from "drizzle-orm";
 import { router, protectedProcedure } from "../trpc";
 import { trades, type Trade, userSettings } from "@/server/db/schema";
 import { parseGiftUrl, getGiftTelegramUrl } from "@/lib/gift-parser";
@@ -236,6 +236,16 @@ export const tradesRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Trade not found" });
       }
 
+      // Validate sellDate/sellPrice pairing after merge with existing values
+      const finalSellDate = input.sellDate !== undefined ? input.sellDate : existing.sellDate;
+      const finalSellPrice = input.sellPrice !== undefined ? input.sellPrice : existing.sellPrice;
+      if ((finalSellDate == null) !== (finalSellPrice == null)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "sellDate and sellPrice must both be set or both be empty",
+        });
+      }
+
       const updateData: Partial<Trade> = {
         updatedAt: new Date(),
       };
@@ -324,11 +334,11 @@ export const tradesRouter = router({
           deletedAt: null,
           updatedAt: new Date(),
         })
-        .where(and(eq(trades.id, input.id), eq(trades.userId, userId)))
+        .where(and(eq(trades.id, input.id), eq(trades.userId, userId), isNotNull(trades.deletedAt)))
         .returning();
 
       if (!updated) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Trade not found" });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Trade not found or not deleted" });
       }
 
       return { success: true };
@@ -358,12 +368,9 @@ export const tradesRouter = router({
       if (fields.commissionFlatStars !== undefined) updateData.commissionFlatStars = fields.commissionFlatStars;
       if (fields.commissionPermille !== undefined) updateData.commissionPermille = fields.commissionPermille;
 
-      if (fields.sellDate !== undefined) {
-        updateData.sellDate = fields.sellDate;
-      }
-
       // If setting sellDate, split by currency for correct rate locking (in transaction)
       if (fields.sellDate !== undefined) {
+        updateData.sellDate = fields.sellDate;
         const starsRate = getStarsUsdRate().toString();
         const tonRate = (await getTonUsdRate())?.toString() ?? null;
 
