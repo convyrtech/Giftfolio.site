@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import Image from "next/image";
-import { CalendarIcon, ChevronDown } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { trpc } from "@/lib/trpc/client";
 import { parseGiftUrl, getGiftImageUrl } from "@/lib/gift-parser";
 import type { Trade } from "@/server/db/schema";
+import { CommissionOverrideSection } from "./commission-override-section";
 
 type Marketplace = "fragment" | "getgems" | "tonkeeper" | "p2p" | "other";
 type TradeMode = "item" | "collection";
@@ -442,43 +443,14 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
       )}
 
       {/* Commission override (collapsible) */}
-      <div className="space-y-2">
-        <button
-          type="button"
-          aria-expanded={showCommission}
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-          onClick={() => setShowCommission(!showCommission)}
-        >
-          <ChevronDown className={cn("h-3 w-3 transition-transform", showCommission && "rotate-180")} />
-          Commission override
-        </button>
-        {showCommission && (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="commFlat" className="text-xs">Flat (Stars)</Label>
-              <Input
-                id="commFlat"
-                type="text"
-                inputMode="numeric"
-                placeholder="0"
-                value={commissionFlat}
-                onChange={(e) => setCommissionFlat(e.target.value.replace(/[^0-9]/g, ""))}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="commPermille" className="text-xs">Permille (0-1000)</Label>
-              <Input
-                id="commPermille"
-                type="text"
-                inputMode="numeric"
-                placeholder="0"
-                value={commissionPermille}
-                onChange={(e) => setCommissionPermille(e.target.value.replace(/[^0-9]/g, ""))}
-              />
-            </div>
-          </div>
-        )}
-      </div>
+      <CommissionOverrideSection
+        expanded={showCommission}
+        onToggle={() => setShowCommission(!showCommission)}
+        flat={commissionFlat}
+        onFlatChange={setCommissionFlat}
+        permille={commissionPermille}
+        onPermilleChange={setCommissionPermille}
+      />
 
       {/* Notes */}
       <div className="space-y-2">

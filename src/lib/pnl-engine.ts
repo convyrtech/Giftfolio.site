@@ -1,5 +1,3 @@
-import type { Stars, NanoTon } from "./currencies";
-
 /**
  * PnL Engine — pure functions for profit/loss calculations.
  *
@@ -151,7 +149,7 @@ export function calculateUnrealizedPnl(
 ): UnrealizedPnlResult {
   // Guard against NaN/Infinity — treat as "no data"
   if (!Number.isFinite(floorPriceStars) || floorPriceStars <= 0) {
-    return { floorPriceStars: 0n as Stars, unrealizedPnl: null, unrealizedPercent: null };
+    return { floorPriceStars: 0n, unrealizedPnl: null, unrealizedPercent: null };
   }
 
   const floor = BigInt(Math.round(floorPriceStars));
@@ -199,74 +197,3 @@ function computeUsdValue(
   return (Number(price) / 1e9) * rate;
 }
 
-/**
- * Aggregate dashboard stats from an array of trade profits.
- */
-export interface DashboardStats {
-  totalTrades: number;
-  openTrades: number;
-  closedTrades: number;
-  totalProfitStars: Stars | null;
-  totalProfitNanoton: NanoTon | null;
-  totalProfitUsd: number | null;
-  winRate: number | null; // 0-100
-  bestTradeStars: bigint | null;
-  worstTradeStars: bigint | null;
-  bestTradeNanoton: bigint | null;
-  worstTradeNanoton: bigint | null;
-}
-
-export function aggregateStats(
-  trades: Array<{ result: ProfitResult; tradeCurrency: "STARS" | "TON" }>,
-): DashboardStats {
-  let totalStars = 0n;
-  let totalNanoton = 0n;
-  let totalUsd = 0;
-  let hasStars = false;
-  let hasNanoton = false;
-  let hasUsd = false;
-  let wins = 0;
-  let closed = 0;
-  let bestTradeStars: bigint | null = null;
-  let worstTradeStars: bigint | null = null;
-  let bestTradeNanoton: bigint | null = null;
-  let worstTradeNanoton: bigint | null = null;
-
-  for (const { result, tradeCurrency } of trades) {
-    if (result.netProfit === null) continue; // skip open trades
-    closed++;
-
-    if (result.netProfit > 0n) wins++;
-
-    if (tradeCurrency === "STARS") {
-      totalStars += result.netProfit;
-      hasStars = true;
-      if (bestTradeStars === null || result.netProfit > bestTradeStars) bestTradeStars = result.netProfit;
-      if (worstTradeStars === null || result.netProfit < worstTradeStars) worstTradeStars = result.netProfit;
-    } else {
-      totalNanoton += result.netProfit;
-      hasNanoton = true;
-      if (bestTradeNanoton === null || result.netProfit > bestTradeNanoton) bestTradeNanoton = result.netProfit;
-      if (worstTradeNanoton === null || result.netProfit < worstTradeNanoton) worstTradeNanoton = result.netProfit;
-    }
-
-    if (result.netProfitUsd !== null) {
-      totalUsd += result.netProfitUsd;
-      hasUsd = true;
-    }
-  }
-
-  return {
-    totalTrades: trades.length,
-    openTrades: trades.length - closed,
-    closedTrades: closed,
-    totalProfitStars: hasStars ? (totalStars as Stars) : null,
-    totalProfitNanoton: hasNanoton ? (totalNanoton as NanoTon) : null,
-    totalProfitUsd: hasUsd ? totalUsd : null,
-    winRate: closed > 0 ? (wins / closed) * 100 : null,
-    bestTradeStars,
-    worstTradeStars,
-    bestTradeNanoton,
-    worstTradeNanoton,
-  };
-}

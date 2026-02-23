@@ -3,7 +3,6 @@ import {
   calculateCommission,
   calculateProfit,
   calculateUnrealizedPnl,
-  aggregateStats,
   type TradeInput,
 } from "../pnl-engine";
 
@@ -255,94 +254,6 @@ describe("calculateUnrealizedPnl", () => {
     const result = calculateUnrealizedPnl(1000n, "STARS", Infinity, 0n, 0, 1);
     expect(result.floorPriceStars).toBe(0n);
     expect(result.unrealizedPnl).toBeNull();
-  });
-});
-
-// ─── Aggregate Stats ───
-
-describe("aggregateStats", () => {
-  it("mixed trades", () => {
-    const trades = [
-      {
-        tradeCurrency: "STARS" as const,
-        result: calculateProfit({
-          tradeCurrency: "STARS",
-          buyPrice: 1000n,
-          sellPrice: 1500n,
-          commissionFlatStars: 0n,
-          commissionPermille: 0,
-          buyRateUsd: "0.013",
-          sellRateUsd: "0.013",
-        }),
-      },
-      {
-        tradeCurrency: "STARS" as const,
-        result: calculateProfit({
-          tradeCurrency: "STARS",
-          buyPrice: 1000n,
-          sellPrice: 800n,
-          commissionFlatStars: 0n,
-          commissionPermille: 0,
-          buyRateUsd: "0.013",
-          sellRateUsd: "0.013",
-        }),
-      },
-      {
-        tradeCurrency: "STARS" as const,
-        result: calculateProfit({
-          tradeCurrency: "STARS",
-          buyPrice: 500n,
-          sellPrice: null,
-          commissionFlatStars: 0n,
-          commissionPermille: 0,
-          buyRateUsd: "0.013",
-          sellRateUsd: null,
-        }),
-      },
-    ];
-
-    const stats = aggregateStats(trades);
-    expect(stats.totalTrades).toBe(3);
-    expect(stats.openTrades).toBe(1);
-    expect(stats.closedTrades).toBe(2);
-    expect(stats.totalProfitStars).toBe(300n); // 500 + (-200) = 300
-    expect(stats.totalProfitNanoton).toBeNull();
-    expect(stats.winRate).toBe(50); // 1 win out of 2 closed
-    expect(stats.bestTradeStars).toBe(500n);
-    expect(stats.worstTradeStars).toBe(-200n);
-    expect(stats.bestTradeNanoton).toBeNull();
-    expect(stats.worstTradeNanoton).toBeNull();
-  });
-
-  it("no trades", () => {
-    const stats = aggregateStats([]);
-    expect(stats.totalTrades).toBe(0);
-    expect(stats.closedTrades).toBe(0);
-    expect(stats.winRate).toBeNull();
-    expect(stats.totalProfitStars).toBeNull();
-  });
-
-  it("all open trades", () => {
-    const trades = [
-      {
-        tradeCurrency: "STARS" as const,
-        result: calculateProfit({
-          tradeCurrency: "STARS",
-          buyPrice: 1000n,
-          sellPrice: null,
-          commissionFlatStars: 0n,
-          commissionPermille: 0,
-          buyRateUsd: null,
-          sellRateUsd: null,
-        }),
-      },
-    ];
-
-    const stats = aggregateStats(trades);
-    expect(stats.totalTrades).toBe(1);
-    expect(stats.openTrades).toBe(1);
-    expect(stats.closedTrades).toBe(0);
-    expect(stats.winRate).toBeNull();
   });
 });
 

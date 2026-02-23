@@ -52,6 +52,7 @@ export function TradesTable({
       { limit: 50, currency, sort, sortDir, showHidden },
       {
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+        maxPages: 20,
       },
     );
 
