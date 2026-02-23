@@ -177,23 +177,13 @@ export const tradesRouter = router({
     }
 
     // Lock USD rate at trade time (external calls outside transaction)
-    let buyRateUsd: string | null = null;
-    if (input.tradeCurrency === "STARS") {
-      buyRateUsd = getStarsUsdRate().toString();
-    } else {
-      const tonRate = await getTonUsdRate();
-      buyRateUsd = tonRate?.toString() ?? null;
-    }
+    const tonRate = input.tradeCurrency === "TON" ? await getTonUsdRate() : null;
+    const rateStr = input.tradeCurrency === "STARS"
+      ? getStarsUsdRate().toString()
+      : tonRate?.toString() ?? null;
 
-    let sellRateUsd: string | null = null;
-    if (input.sellPrice !== undefined && input.sellDate) {
-      if (input.tradeCurrency === "STARS") {
-        sellRateUsd = getStarsUsdRate().toString();
-      } else {
-        const tonRate = await getTonUsdRate();
-        sellRateUsd = tonRate?.toString() ?? null;
-      }
-    }
+    const buyRateUsd = rateStr;
+    const sellRateUsd = (input.sellPrice !== undefined && input.sellDate) ? rateStr : null;
 
     // Transaction: read settings + insert trade atomically
     const trade = await ctx.db.transaction(async (tx) => {

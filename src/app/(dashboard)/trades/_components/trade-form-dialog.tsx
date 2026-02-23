@@ -374,7 +374,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
             placeholder={currency === "STARS" ? "1000" : "3500000000"}
             value={buyPrice}
             onChange={(e) => setBuyPrice(e.target.value.replace(/[^0-9]/g, ""))}
-            aria-required={!isEdit}
+            aria-required={!isEdit ? "true" : "false"}
             disabled={isEdit}
           />
         </div>

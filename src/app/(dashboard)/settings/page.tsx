@@ -29,7 +29,8 @@ export default function SettingsPage(): React.ReactElement {
     if (settings) {
       setCommissionStars(String(settings.defaultCommissionStars));
       setCommissionPermille(String(settings.defaultCommissionPermille));
-      setDefaultCurrency(settings.defaultCurrency);
+      const c = settings.defaultCurrency;
+      if (c === "STARS" || c === "TON") setDefaultCurrency(c);
       setTimezone(settings.timezone);
     }
   }, [settings]);
