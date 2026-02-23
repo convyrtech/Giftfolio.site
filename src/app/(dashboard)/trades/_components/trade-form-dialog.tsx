@@ -39,6 +39,7 @@ import { trpc } from "@/lib/trpc/client";
 import { parseGiftUrl, getGiftImageUrl } from "@/lib/gift-parser";
 import type { Trade } from "@/server/db/schema";
 import { CommissionOverrideSection } from "./commission-override-section";
+import { GiftNameCombobox } from "./gift-name-combobox";
 
 type Marketplace = "fragment" | "getgems" | "tonkeeper" | "p2p" | "other";
 type TradeMode = "item" | "collection";
@@ -309,15 +310,8 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
       {/* Gift Name (collection mode) */}
       {!isEdit && mode === "collection" && (
         <div className="space-y-2">
-          <Label htmlFor="giftName">Gift Name *</Label>
-          <Input
-            id="giftName"
-            placeholder="e.g. PlushPepe"
-            value={giftName}
-            onChange={(e) => setGiftName(e.target.value)}
-            aria-required="true"
-            autoFocus
-          />
+          <Label htmlFor="gift-name-combobox">Gift Name *</Label>
+          <GiftNameCombobox id="gift-name-combobox" value={giftName} onValueChange={setGiftName} />
         </div>
       )}
 

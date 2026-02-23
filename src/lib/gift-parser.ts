@@ -69,7 +69,7 @@ export function parseGiftUrl(input: string): ParsedGift | null {
  * "Jelly-Fish" → "Jelly Fish"
  * "NFTCard" → "NFT Card"
  */
-function pascalCaseToSpaces(name: string): string {
+export function pascalCaseToSpaces(name: string): string {
   return name
     .replace(/-/g, " ")
     .replace(/([a-z\d])([A-Z])/g, "$1 $2")

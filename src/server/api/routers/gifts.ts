@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc";
-import { parseGiftUrl } from "@/lib/gift-parser";
+import { router, publicProcedure, protectedProcedure } from "../trpc";
+import { parseGiftUrl, pascalCaseToSpaces } from "@/lib/gift-parser";
+import { getFloorPrices } from "@/lib/floor-prices";
 
 export const giftsRouter = router({
   parseUrl: publicProcedure
@@ -8,4 +9,16 @@ export const giftsRouter = router({
     .query(({ input }) => {
       return parseGiftUrl(input.input);
     }),
+
+  /** Return gift collection names + floor prices for autocomplete. */
+  catalog: protectedProcedure.query(async () => {
+    const floorPrices = await getFloorPrices();
+    return Object.entries(floorPrices)
+      .map(([name, floor]) => ({
+        name,
+        displayName: pascalCaseToSpaces(name),
+        floorStars: floor,
+      }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }),
 });
