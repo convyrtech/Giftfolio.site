@@ -8,6 +8,7 @@ import { getTonUsdRate, getStarsUsdRate } from "@/lib/exchange-rates";
 
 const sortColumns = ["buy_date", "sell_date", "buy_price", "sell_price", "created_at"] as const;
 const marketplaceEnum = z.enum(["fragment", "getgems", "tonkeeper", "p2p", "other"]);
+const MAX_EXPORT_ROWS = 10_000;
 
 const tradeInput = z.object({
   giftUrl: z.string().min(1).max(500).optional(),
@@ -495,6 +496,28 @@ export const tradesRouter = router({
       return updated;
     }),
 
+  toggleExclude: rateLimitedProcedure
+    .input(z.object({ id: z.coerce.bigint() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+
+      // Atomic toggle using SQL NOT to avoid TOCTOU race
+      const [updated] = await ctx.db
+        .update(trades)
+        .set({
+          excludeFromPnl: sql`NOT ${trades.excludeFromPnl}`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(trades.id, input.id), eq(trades.userId, userId), isNull(trades.deletedAt)))
+        .returning();
+
+      if (!updated) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Trade not found" });
+      }
+
+      return updated;
+    }),
+
   exportCsv: protectedProcedure
     .input(
       z.object({
@@ -514,7 +537,8 @@ export const tradesRouter = router({
         .select()
         .from(trades)
         .where(and(...conditions))
-        .orderBy(desc(trades.buyDate));
+        .orderBy(desc(trades.buyDate))
+        .limit(MAX_EXPORT_ROWS);
 
       return allTrades;
     }),

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
   flexRender,
   type RowSelectionState,
 } from "@tanstack/react-table";
+import { toast } from "sonner";
 import {
   Table,
   TableBody,
@@ -19,8 +20,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import type { Trade } from "@/server/db/schema";
-import { columns } from "./columns";
+import { columns, type TradesTableMeta } from "./columns";
 import { EmptyState } from "./empty-state";
+import { TradeFormDialog } from "./trade-form-dialog";
+import { DeleteTradeDialog } from "./delete-trade-dialog";
 
 interface TradesTableProps {
   currency?: "STARS" | "TON";
@@ -40,6 +43,9 @@ export function TradesTable({
   onRowSelectionChange,
 }: TradesTableProps): React.ReactElement {
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [editTrade, setEditTrade] = useState<Trade | null>(null);
+  const [deleteTrade, setDeleteTrade] = useState<Trade | null>(null);
+  const utils = trpc.useUtils();
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     trpc.trades.list.useInfiniteQuery(
@@ -48,6 +54,31 @@ export function TradesTable({
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
       },
     );
+
+  const toggleHidden = trpc.trades.toggleHidden.useMutation({
+    onSuccess: () => {
+      void utils.trades.list.invalidate();
+      void utils.stats.dashboard.invalidate();
+      toast.success("Visibility updated");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const toggleExclude = trpc.trades.toggleExclude.useMutation({
+    onSuccess: () => {
+      void utils.trades.list.invalidate();
+      void utils.stats.dashboard.invalidate();
+      toast.success("PnL setting updated");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const tableMeta: TradesTableMeta = {
+    onEdit: setEditTrade,
+    onDelete: setDeleteTrade,
+    onToggleHidden: (trade) => toggleHidden.mutate({ id: trade.id }),
+    onToggleExclude: (trade) => toggleExclude.mutate({ id: trade.id }),
+  };
 
   const allTrades = useMemo<Trade[]>(
     () => data?.pages.flatMap((page) => page.data) ?? [],
@@ -61,6 +92,7 @@ export function TradesTable({
     manualSorting: true,
     enableRowSelection: true,
     getRowId: (row) => String(row.id),
+    meta: tableMeta,
     state: { rowSelection },
     onRowSelectionChange: (updater) => {
       const next = typeof updater === "function" ? updater(rowSelection) : updater;
@@ -147,6 +179,20 @@ export function TradesTable({
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           <span className="sr-only">Loading more trades</span>
         </div>
+      )}
+
+      {/* Lifted dialogs — single instance for entire table */}
+      <TradeFormDialog
+        open={editTrade !== null}
+        onOpenChange={(open) => { if (!open) setEditTrade(null); }}
+        trade={editTrade ?? undefined}
+      />
+      {deleteTrade && (
+        <DeleteTradeDialog
+          open
+          onOpenChange={(open) => { if (!open) setDeleteTrade(null); }}
+          trade={deleteTrade}
+        />
       )}
     </div>
   );

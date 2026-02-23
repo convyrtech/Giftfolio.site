@@ -1,6 +1,6 @@
 "use client";
 
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, RowData } from "@tanstack/react-table";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,6 +10,24 @@ import { calculateProfit } from "@/lib/pnl-engine";
 import { getGiftImageUrl } from "@/lib/gift-parser";
 import type { Trade } from "@/server/db/schema";
 import { TradeRowActions } from "./trade-row-actions";
+
+export interface TradesTableMeta {
+  onEdit: (trade: Trade) => void;
+  onDelete: (trade: Trade) => void;
+  onToggleHidden: (trade: Trade) => void;
+  onToggleExclude: (trade: Trade) => void;
+}
+
+// Type-safe module augmentation — removes need for unsafe `as` cast
+declare module "@tanstack/react-table" {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface TableMeta<TData extends RowData> {
+    onEdit: (trade: Trade) => void;
+    onDelete: (trade: Trade) => void;
+    onToggleHidden: (trade: Trade) => void;
+    onToggleExclude: (trade: Trade) => void;
+  }
+}
 
 function formatPrice(price: bigint, currency: "STARS" | "TON"): string {
   if (currency === "STARS") {
@@ -192,7 +210,18 @@ export const columns: ColumnDef<Trade>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => <TradeRowActions trade={row.original} />,
+    cell: ({ row, table }) => {
+      const meta = table.options.meta;
+      return (
+        <TradeRowActions
+          trade={row.original}
+          onEdit={() => meta?.onEdit(row.original)}
+          onDelete={() => meta?.onDelete(row.original)}
+          onToggleHidden={() => meta?.onToggleHidden(row.original)}
+          onToggleExclude={() => meta?.onToggleExclude(row.original)}
+        />
+      );
+    },
     size: 50,
   },
 ];
