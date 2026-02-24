@@ -5,6 +5,12 @@ import { toast } from "sonner";
 import { X, Eye, EyeOff, BarChart3, Trash2, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+/** Strip local timezone offset so PostgreSQL `date` column stores today's calendar date. */
+function todayUTC(): Date {
+  const n = new Date();
+  return new Date(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()));
+}
 import {
   Popover,
   PopoverContent,
@@ -102,7 +108,7 @@ function SetSellPriceAction({
               bulkUpdate.mutate({
                 ids,
                 sellPrice: BigInt(price),
-                sellDate: new Date(),
+                sellDate: todayUTC(),
               });
             }}
           >

@@ -8,6 +8,11 @@ import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+/** Strip local timezone offset so PostgreSQL `date` column stores the intended calendar date. */
+function toUTCDate(d: Date): Date {
+  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+}
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -198,7 +203,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
         updateTrade.mutate({
           id: trade.id,
           sellPrice: sellPrice ? BigInt(sellPrice) : undefined,
-          sellDate: sellDate ?? undefined,
+          sellDate: sellDate ? toUTCDate(sellDate) : undefined,
           sellMarketplace: sellMarketplace || undefined,
           notes: notes || undefined,
           quantity: quantity ? parseInt(quantity, 10) : undefined,
@@ -226,9 +231,9 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
           giftName: mode === "collection" ? giftName : undefined,
           tradeCurrency: currency,
           buyPrice: BigInt(buyPrice),
-          buyDate,
+          buyDate: toUTCDate(buyDate),
           sellPrice: sellPrice ? BigInt(sellPrice) : undefined,
-          sellDate: sellDate ?? undefined,
+          sellDate: sellDate ? toUTCDate(sellDate) : undefined,
           quantity: parseInt(quantity, 10) || 1,
           buyMarketplace: buyMarketplace || undefined,
           sellMarketplace: sellMarketplace || undefined,
