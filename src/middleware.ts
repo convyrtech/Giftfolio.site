@@ -22,6 +22,11 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(new URL("/trades", request.url));
   }
 
+  // Allow login page for unauthenticated users (avoid redirect loop)
+  if (pathname === "/login") {
+    return NextResponse.next();
+  }
+
   // Unauthenticated user hitting protected routes → redirect to login
   if (!sessionCookie) {
     return NextResponse.redirect(new URL("/login", request.url));
@@ -31,5 +36,5 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 }
 
 export const config = {
-  matcher: ["/", "/trades/:path*", "/settings/:path*", "/login"],
+  matcher: ["/", "/trades/:path*", "/analytics/:path*", "/settings/:path*", "/login"],
 };
