@@ -160,7 +160,11 @@ export function TradesTable({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} style={{ width: header.getSize() }}>
+                  <TableHead
+                    key={header.id}
+                    style={{ width: header.getSize() }}
+                    className="bg-muted/50 text-xs uppercase tracking-wider font-medium text-muted-foreground"
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}
@@ -177,7 +181,8 @@ export function TradesTable({
                   key={row.id}
                   data-state={row.getIsSelected() ? "selected" : undefined}
                   className={cn(
-                    row.getIsSelected() && "bg-accent/50",
+                    "even:bg-muted/30",
+                    row.getIsSelected() && "bg-accent/40",
                     trade.isHidden && "opacity-50",
                   )}
                 >

@@ -15,24 +15,22 @@ export function EmptyState(): React.ReactElement {
   return (
     <>
       <div className="flex flex-col items-center justify-center gap-4 py-16">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-          <Gift className="h-8 w-8 text-muted-foreground" />
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted">
+          <Gift className="h-10 w-10 text-muted-foreground/60" />
         </div>
         <div className="text-center">
-          <h3 className="text-lg font-semibold">No trades yet</h3>
+          <h3 className="text-lg font-medium">No trades yet</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Add your first trade to start tracking profit
           </p>
         </div>
-        <div className="flex flex-col items-center gap-2">
-          <Button onClick={() => setShowForm(true)}>Add trade</Button>
-          <Link
-            href="/settings"
-            className="text-xs text-muted-foreground hover:underline"
-          >
-            Set up commission first
-          </Link>
-        </div>
+        <Button onClick={() => setShowForm(true)}>Add trade</Button>
+        <Link
+          href="/settings"
+          className="text-xs text-muted-foreground hover:underline"
+        >
+          Set up commission first
+        </Link>
       </div>
 
       <TradeFormDialog open={showForm} onOpenChange={setShowForm} />

@@ -111,7 +111,7 @@ export const userSettings = pgTable("user_settings", {
     .default(0n)
     .notNull(),
   defaultCommissionPermille: smallint("default_commission_permille").default(0).notNull(),
-  defaultCurrency: text("default_currency", { enum: tradeCurrencies }).default("STARS").notNull(),
+  defaultCurrency: text("default_currency", { enum: tradeCurrencies }).default("TON").notNull(),
   timezone: text().default("UTC").notNull(),
 });
 

@@ -107,14 +107,14 @@ export const columns: ColumnDef<Trade>[] = [
             <Image
               src={imageUrl}
               alt={trade.giftName}
-              width={36}
-              height={36}
-              sizes="36px"
+              width={40}
+              height={40}
+              sizes="40px"
               loading="lazy"
               className="rounded"
             />
           ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded bg-muted text-xs font-medium text-muted-foreground">
+            <div className="flex h-10 w-10 items-center justify-center rounded bg-muted text-xs font-medium text-muted-foreground">
               {trade.giftName.slice(0, 2)}
             </div>
           )}
@@ -164,11 +164,21 @@ export const columns: ColumnDef<Trade>[] = [
   {
     accessorKey: "tradeCurrency",
     header: "Currency",
-    cell: ({ row }) => (
-      <Badge variant="outline" className="text-xs">
-        {row.original.tradeCurrency}
-      </Badge>
-    ),
+    cell: ({ row }) => {
+      const currency = row.original.tradeCurrency;
+      return (
+        <Badge
+          variant="outline"
+          className={cn(
+            "text-xs",
+            currency === "TON" && "border-ton-accent/50 text-ton-accent",
+            currency === "STARS" && "border-stars-accent/50 text-stars-accent",
+          )}
+        >
+          {currency}
+        </Badge>
+      );
+    },
     size: 80,
   },
   {
@@ -191,9 +201,9 @@ export const columns: ColumnDef<Trade>[] = [
   },
   {
     accessorKey: "buyPrice",
-    header: "Buy Price",
+    header: () => <span className="block text-right">Buy Price</span>,
     cell: ({ row }) => (
-      <span className="tabular-nums text-sm">
+      <span className="block text-right tabular-nums text-sm">
         {formatPrice(row.original.buyPrice, row.original.tradeCurrency)}
       </span>
     ),
@@ -201,9 +211,9 @@ export const columns: ColumnDef<Trade>[] = [
   },
   {
     accessorKey: "sellPrice",
-    header: "Sell Price",
+    header: () => <span className="block text-right">Sell Price</span>,
     cell: ({ row }) => (
-      <span className="tabular-nums text-sm">
+      <span className="block text-right tabular-nums text-sm">
         {row.original.sellPrice !== null
           ? formatPrice(row.original.sellPrice, row.original.tradeCurrency)
           : "\u2014"}
@@ -213,29 +223,32 @@ export const columns: ColumnDef<Trade>[] = [
   },
   {
     id: "profit",
-    header: "Profit",
+    header: () => <span className="block text-right">Profit</span>,
     cell: ({ row }) => {
       const result = computeProfit(row.original);
-      if (!result) return <span className="text-sm text-muted-foreground">{"\u2014"}</span>;
+      if (!result) return <span className="block text-right text-sm text-muted-foreground">{"\u2014"}</span>;
 
       const isPositive = result.value > 0n;
       const isNegative = result.value < 0n;
 
       return (
-        <div className="tabular-nums text-sm">
+        <div className="flex justify-end tabular-nums text-sm">
           <span
-            className={
-              isPositive ? "text-green-500" : isNegative ? "text-red-500" : ""
-            }
+            className={cn(
+              "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm font-medium",
+              isPositive && "bg-profit/10 text-profit",
+              isNegative && "bg-loss/10 text-loss",
+              !isPositive && !isNegative && "text-muted-foreground",
+            )}
           >
             {isPositive ? "+" : ""}
             {formatPrice(result.value, row.original.tradeCurrency)}
+            {result.percent !== null && (
+              <span className="text-xs opacity-70">
+                ({result.percent >= 0 ? "+" : ""}{result.percent.toFixed(1)}%)
+              </span>
+            )}
           </span>
-          {result.percent !== null && (
-            <span className="ml-1 text-xs text-muted-foreground">
-              ({result.percent >= 0 ? "+" : ""}{result.percent.toFixed(1)}%)
-            </span>
-          )}
         </div>
       );
     },
@@ -243,18 +256,18 @@ export const columns: ColumnDef<Trade>[] = [
   },
   {
     id: "unrealizedPnl",
-    header: "Floor / PnL",
+    header: () => <span className="block text-right">Floor / PnL</span>,
     cell: ({ row, table }) => {
       const trade = row.original;
       // Only meaningful for open positions (sellPrice = null means unsold)
       if (trade.sellPrice !== null) {
-        return <span className="text-sm text-muted-foreground">{"\u2014"}</span>;
+        return <span className="block text-right text-sm text-muted-foreground">{"\u2014"}</span>;
       }
 
       const floorPrices = table.options.meta?.floorPrices ?? {};
       const floorStars = floorPrices[trade.giftName];
       if (floorStars === undefined || floorStars <= 0) {
-        return <span className="text-xs text-muted-foreground">N/A</span>;
+        return <span className="block text-right text-xs text-muted-foreground">N/A</span>;
       }
 
       const result = calculateUnrealizedPnl(
@@ -271,7 +284,7 @@ export const columns: ColumnDef<Trade>[] = [
         return (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="tabular-nums text-sm text-muted-foreground">
+              <span className="block text-right tabular-nums text-sm text-muted-foreground">
                 {formatPrice(result.floorPriceStars, "STARS")}
               </span>
             </TooltipTrigger>
@@ -286,19 +299,25 @@ export const columns: ColumnDef<Trade>[] = [
       const isNegative = result.unrealizedPnl < 0n;
 
       return (
-        <div className="tabular-nums text-sm">
+        <div className="text-right tabular-nums text-sm">
           <div className="text-xs text-muted-foreground">
             {formatPrice(result.floorPriceStars, "STARS")}
           </div>
-          <span className={isPositive ? "text-green-500" : isNegative ? "text-red-500" : ""}>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm font-medium",
+              isPositive && "bg-profit/10 text-profit",
+              isNegative && "bg-loss/10 text-loss",
+            )}
+          >
             {isPositive ? "+" : ""}
             {formatPrice(result.unrealizedPnl, "STARS")}
+            {result.unrealizedPercent !== null && (
+              <span className="text-xs opacity-70">
+                ({result.unrealizedPercent >= 0 ? "+" : ""}{result.unrealizedPercent.toFixed(1)}%)
+              </span>
+            )}
           </span>
-          {result.unrealizedPercent !== null && (
-            <span className="ml-1 text-xs text-muted-foreground">
-              ({result.unrealizedPercent >= 0 ? "+" : ""}{result.unrealizedPercent.toFixed(1)}%)
-            </span>
-          )}
         </div>
       );
     },

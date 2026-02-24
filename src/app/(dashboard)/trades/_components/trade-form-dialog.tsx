@@ -119,7 +119,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
   // Form state
   const [giftUrl, setGiftUrl] = useState(trade?.giftLink ?? "");
   const [giftName, setGiftName] = useState(trade?.giftName ?? "");
-  const [currency, setCurrency] = useState<"STARS" | "TON">(trade?.tradeCurrency ?? "STARS");
+  const [currency, setCurrency] = useState<"STARS" | "TON">(trade?.tradeCurrency ?? "TON");
   const [buyPrice, setBuyPrice] = useState(trade ? String(trade.buyPrice) : "");
   const [sellPrice, setSellPrice] = useState(
     trade?.sellPrice !== null && trade?.sellPrice !== undefined ? String(trade.sellPrice) : "",
@@ -330,8 +330,8 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="STARS">Stars</SelectItem>
                 <SelectItem value="TON">TON</SelectItem>
+                <SelectItem value="STARS">Stars</SelectItem>
               </SelectContent>
             </Select>
           </div>

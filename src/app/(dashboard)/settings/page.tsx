@@ -22,7 +22,7 @@ export default function SettingsPage(): React.ReactElement {
 
   const [commissionStars, setCommissionStars] = useState("");
   const [commissionPermille, setCommissionPermille] = useState("");
-  const [defaultCurrency, setDefaultCurrency] = useState<"STARS" | "TON">("STARS");
+  const [defaultCurrency, setDefaultCurrency] = useState<"STARS" | "TON">("TON");
   const [timezone, setTimezone] = useState("");
 
   useEffect(() => {
@@ -123,8 +123,8 @@ export default function SettingsPage(): React.ReactElement {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="STARS">Stars</SelectItem>
                 <SelectItem value="TON">TON</SelectItem>
+                <SelectItem value="STARS">Stars</SelectItem>
               </SelectContent>
             </Select>
           </div>

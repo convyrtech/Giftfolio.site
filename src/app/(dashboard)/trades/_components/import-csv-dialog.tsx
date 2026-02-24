@@ -172,7 +172,7 @@ export function ImportCsvDialog({ open, onOpenChange }: ImportCsvDialogProps): R
                 {/* Summary */}
                 <div className="flex items-center gap-4 text-sm">
                   <span className="flex items-center gap-1.5">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircle className="h-4 w-4 text-profit" />
                     {validCount} valid
                   </span>
                   {errorCount > 0 && (
@@ -227,7 +227,7 @@ export function ImportCsvDialog({ open, onOpenChange }: ImportCsvDialogProps): R
                                 {row.errors[0]}
                               </span>
                             ) : (
-                              <span className="text-green-500">OK</span>
+                              <span className="text-profit">OK</span>
                             )}
                           </td>
                         </tr>
@@ -275,7 +275,7 @@ export function ImportCsvDialog({ open, onOpenChange }: ImportCsvDialogProps): R
         {step === "result" && result && (
           <div className="space-y-4 py-4">
             <div className="flex items-start gap-3">
-              <CheckCircle className="mt-0.5 h-5 w-5 text-green-500" />
+              <CheckCircle className="mt-0.5 h-5 w-5 text-profit" />
               <div>
                 <p className="font-medium">
                   Imported {result.inserted} trade{result.inserted !== 1 ? "s" : ""}

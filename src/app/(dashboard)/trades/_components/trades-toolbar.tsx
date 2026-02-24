@@ -67,14 +67,16 @@ export function TradesToolbar({
           Import
         </Button>
 
+        <div className="h-5 w-px bg-border" />
+
         <Select value={currency} onValueChange={(v) => { if ((currencyFilters as readonly string[]).includes(v)) onCurrencyChange(v as CurrencyFilter); }}>
           <SelectTrigger className="w-28" aria-label="Filter by currency">
             <SelectValue placeholder="Currency" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All</SelectItem>
-            <SelectItem value="STARS">Stars</SelectItem>
             <SelectItem value="TON">TON</SelectItem>
+            <SelectItem value="STARS">Stars</SelectItem>
           </SelectContent>
         </Select>
 
@@ -108,7 +110,7 @@ export function TradesToolbar({
               size="sm"
               onClick={() => onShowHiddenChange(!showHidden)}
               aria-label={showHidden ? "Hide hidden trades" : "Show hidden trades"}
-              aria-pressed={showHidden}
+              aria-pressed={showHidden ? "true" : "false"}
             >
               {showHidden ? (
                 <Eye className="h-4 w-4" />

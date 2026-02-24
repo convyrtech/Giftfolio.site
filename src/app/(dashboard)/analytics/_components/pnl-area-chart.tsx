@@ -24,8 +24,8 @@ import { ChartPeriodSelector, type Range } from "./chart-period-selector";
 type Currency = "STARS" | "TON";
 
 const CURRENCIES = [
-  { value: "STARS" as const, label: "Stars" },
   { value: "TON" as const, label: "TON" },
+  { value: "STARS" as const, label: "Stars" },
 ];
 
 const chartConfig: ChartConfig = {
@@ -45,7 +45,7 @@ function formatTick(v: number, currency: Currency): string {
 
 export function PnlAreaChart(): React.ReactElement {
   const [range, setRange] = useState<Range>("30d");
-  const [currency, setCurrency] = useState<Currency>("STARS");
+  const [currency, setCurrency] = useState<Currency>("TON");
   const gradientId = useId().replace(/:/g, "");
 
   const { data, isLoading } = trpc.analytics.pnlTimeSeries.useQuery(
