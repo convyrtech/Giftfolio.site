@@ -5,10 +5,14 @@ import { router, protectedProcedure, rateLimitedProcedure } from "../trpc";
 import { trades, type Trade, userSettings } from "@/server/db/schema";
 import { parseGiftUrl, getGiftTelegramUrl } from "@/lib/gift-parser";
 import { getTonUsdRate, getStarsUsdRate } from "@/lib/exchange-rates";
+import { importRowSchema } from "@/lib/csv-import-schema";
+import { importRateLimit } from "@/lib/rate-limit";
 
 const sortColumns = ["buy_date", "sell_date", "buy_price", "sell_price", "created_at"] as const;
 const marketplaceEnum = z.enum(["fragment", "getgems", "tonkeeper", "p2p", "other"]);
 const MAX_EXPORT_ROWS = 10_000;
+const MAX_IMPORT_ROWS = 500;
+const IMPORT_BATCH_SIZE = 100;
 
 const tradeInput = z.object({
   giftUrl: z.string().min(1).max(500).optional(),
@@ -509,6 +513,118 @@ export const tradesRouter = router({
       }
 
       return updated;
+    }),
+
+  bulkImport: protectedProcedure
+    .input(
+      z.object({
+        rows: z.array(importRowSchema).min(1).max(MAX_IMPORT_ROWS),
+        skipErrors: z.boolean().default(false),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+
+      // Rate limit: 5 imports/hour
+      const rl = await importRateLimit.limit(userId);
+      if (!rl.success) {
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Import rate limit exceeded. Try again later.",
+        });
+      }
+
+      // Fetch user settings for commission defaults
+      const [settings] = await ctx.db
+        .select()
+        .from(userSettings)
+        .where(eq(userSettings.userId, userId));
+
+      const defaultFlat = settings?.defaultCommissionStars ?? 0n;
+      const defaultPerm = settings?.defaultCommissionPermille ?? 0;
+
+      // Pre-fetch exchange rates
+      const hasTon = input.rows.some((r) => r.tradeCurrency === "TON");
+      const hasStars = input.rows.some((r) => r.tradeCurrency === "STARS");
+      const tonRate = hasTon ? await getTonUsdRate() : null;
+      const starsRate = hasStars ? getStarsUsdRate() : null;
+
+      /** Build insert value from a validated row */
+      function buildInsertValue(row: (typeof input.rows)[number]): typeof trades.$inferInsert {
+        let giftLink: string | null = null;
+        let giftSlug: string;
+        let giftNumber: bigint | null = null;
+
+        if (row.giftNumber) {
+          giftSlug = `${row.giftName}-${row.giftNumber}`;
+          giftLink = getGiftTelegramUrl(giftSlug);
+          giftNumber = BigInt(row.giftNumber);
+        } else {
+          giftSlug = `${row.giftName}-batch-${crypto.randomUUID()}`;
+        }
+
+        const rateStr = row.tradeCurrency === "TON"
+          ? tonRate?.toString() ?? null
+          : starsRate?.toString() ?? null;
+
+        return {
+          userId,
+          giftLink,
+          giftSlug,
+          giftName: row.giftName,
+          giftNumber,
+          quantity: row.quantity,
+          tradeCurrency: row.tradeCurrency,
+          buyPrice: row.buyPrice,
+          sellPrice: row.sellPrice,
+          buyDate: row.buyDate,
+          sellDate: row.sellDate,
+          // TON trades cannot have flat Stars commission (DB constraint)
+          commissionFlatStars: row.tradeCurrency === "TON" ? 0n : defaultFlat,
+          commissionPermille: defaultPerm,
+          buyRateUsd: rateStr,
+          sellRateUsd: row.sellPrice !== null ? rateStr : null,
+          buyMarketplace: row.buyMarketplace,
+          sellMarketplace: row.sellMarketplace,
+          excludeFromPnl: false,
+          notes: null,
+        };
+      }
+
+      /** Sanitize DB error messages to avoid leaking schema internals */
+      function sanitizeError(err: unknown): string {
+        const msg = err instanceof Error ? err.message : "Insert failed";
+        if (msg.includes("uq_trades_user_gift_open")) return "Duplicate open position for this gift";
+        if (msg.includes("chk_")) return "Data validation constraint failed";
+        return "Row could not be inserted";
+      }
+
+      const errors: Array<{ row: number; message: string }> = [];
+      let inserted = 0;
+
+      if (input.skipErrors) {
+        // Insert row-by-row without a transaction — each row is independent
+        for (let i = 0; i < input.rows.length; i++) {
+          try {
+            await ctx.db.insert(trades).values(buildInsertValue(input.rows[i]!));
+            inserted++;
+          } catch (e) {
+            errors.push({ row: i + 1, message: sanitizeError(e) });
+          }
+        }
+      } else {
+        // All-or-nothing: batch insert inside a transaction
+        await ctx.db.transaction(async (tx) => {
+          for (let batchStart = 0; batchStart < input.rows.length; batchStart += IMPORT_BATCH_SIZE) {
+            const batch = input.rows.slice(batchStart, batchStart + IMPORT_BATCH_SIZE);
+            const values = batch.map((row) => buildInsertValue(row));
+            await tx.insert(trades).values(values);
+            inserted += values.length;
+          }
+        });
+      }
+
+      return { inserted, skipped: errors.length, errors };
     }),
 
   exportCsv: protectedProcedure

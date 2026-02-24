@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Plus, Eye, EyeOff } from "lucide-react";
+import { Download, Upload, Plus, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -19,6 +19,7 @@ import { trpc } from "@/lib/trpc/client";
 import { nanoTonToTonString, type NanoTon } from "@/lib/currencies";
 import type { Trade } from "@/server/db/schema";
 import { TradeFormDialog } from "./trade-form-dialog";
+import { ImportCsvDialog } from "./import-csv-dialog";
 
 const currencyFilters = ["all", "STARS", "TON"] as const;
 type CurrencyFilter = (typeof currencyFilters)[number];
@@ -51,6 +52,7 @@ export function TradesToolbar({
   onShowHiddenChange,
 }: TradesToolbarProps): React.ReactElement {
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   return (
     <>
@@ -58,6 +60,11 @@ export function TradesToolbar({
         <Button onClick={() => setShowForm(true)} size="sm">
           <Plus className="mr-1 h-4 w-4" />
           Add trade
+        </Button>
+
+        <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
+          <Upload className="mr-1 h-4 w-4" />
+          Import
         </Button>
 
         <Select value={currency} onValueChange={(v) => { if ((currencyFilters as readonly string[]).includes(v)) onCurrencyChange(v as CurrencyFilter); }}>
@@ -121,6 +128,7 @@ export function TradesToolbar({
       </div>
 
       <TradeFormDialog open={showForm} onOpenChange={setShowForm} />
+      <ImportCsvDialog open={showImport} onOpenChange={setShowImport} />
     </>
   );
 }

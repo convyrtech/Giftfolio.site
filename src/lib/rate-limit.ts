@@ -34,6 +34,16 @@ const mutationLimiter = redis
     })
   : null;
 
+/** CSV import: 5 imports per hour per user */
+const importLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, "3600 s"),
+      prefix: "rl:import",
+      analytics: false,
+    })
+  : null;
+
 /** Rate limit check — returns { success: true } if no Redis (dev mode passthrough) */
 async function check(limiter: Ratelimit | null, key: string): Promise<{ success: boolean }> {
   if (!limiter) return { success: true };
@@ -42,3 +52,4 @@ async function check(limiter: Ratelimit | null, key: string): Promise<{ success:
 
 export const authRateLimit = { limit: (key: string) => check(authLimiter, key) };
 export const mutationRateLimit = { limit: (key: string) => check(mutationLimiter, key) };
+export const importRateLimit = { limit: (key: string) => check(importLimiter, key) };
