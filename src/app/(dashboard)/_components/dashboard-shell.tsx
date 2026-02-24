@@ -3,7 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BarChart3, TrendingUp, Settings, LogOut, Gift } from "lucide-react";
+import { useTheme } from "next-themes";
+import { BarChart3, TrendingUp, Settings, LogOut, Gift, Sun, Moon } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
@@ -21,6 +22,7 @@ const navItems = [
 
 export function DashboardShell({ user, children }: DashboardShellProps): React.ReactElement {
   const pathname = usePathname();
+  const { resolvedTheme, setTheme } = useTheme();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -66,6 +68,16 @@ export function DashboardShell({ user, children }: DashboardShellProps): React.R
                 unoptimized
               />
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative h-8 w-8 min-h-[44px] min-w-[44px] overflow-hidden"
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              aria-label="Toggle theme"
+            >
+              <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"

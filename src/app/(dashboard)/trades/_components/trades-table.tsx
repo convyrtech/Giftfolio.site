@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import type { Trade } from "@/server/db/schema";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { columns, type TradesTableMeta } from "./columns";
 import { EmptyState } from "./empty-state";
 import { TradeFormDialog } from "./trade-form-dialog";
@@ -92,6 +93,20 @@ export function TradesTable({
     [data?.pages],
   );
 
+  // Hide detail columns on mobile — show only Gift + Profit + Actions
+  const isMobile = useMediaQuery("(max-width: 767px)");
+  const columnVisibility = useMemo(
+    () => ({
+      tradeCurrency: !isMobile,
+      buyDate: !isMobile,
+      sellDate: !isMobile,
+      buyPrice: !isMobile,
+      sellPrice: !isMobile,
+      unrealizedPnl: !isMobile,
+    }),
+    [isMobile],
+  );
+
   const table = useReactTable({
     data: allTrades,
     columns,
@@ -100,7 +115,7 @@ export function TradesTable({
     enableRowSelection: true,
     getRowId: (row) => String(row.id),
     meta: tableMeta,
-    state: { rowSelection },
+    state: { rowSelection, columnVisibility },
     onRowSelectionChange: (updater) => {
       const next = typeof updater === "function" ? updater(rowSelection) : updater;
       onRowSelectionChange(next);

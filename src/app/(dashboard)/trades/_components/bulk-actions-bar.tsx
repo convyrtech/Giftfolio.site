@@ -34,7 +34,7 @@ export function BulkActionsBar({
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur supports-[backdrop-filter]:bg-background/60" role="region" aria-label="Bulk actions">
+    <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-50 border-t bg-background/95 p-3 backdrop-blur md:bottom-0 md:pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] supports-[backdrop-filter]:bg-background/60" role="region" aria-label="Bulk actions">
       <div className="mx-auto flex max-w-4xl items-center gap-2">
         <span className="shrink-0 text-sm font-medium" role="status" aria-live="polite" aria-atomic="true">{count} selected</span>
         <Button variant="ghost" size="sm" onClick={onClearSelection}>
