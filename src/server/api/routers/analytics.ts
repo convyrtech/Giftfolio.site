@@ -40,11 +40,12 @@ export const analyticsRouter = router({
       const tz = settings?.timezone ?? "UTC";
 
       // Date truncation based on granularity
+      // sell_date is `date` type — must cast to `timestamp` before AT TIME ZONE
       const dateTrunc = input.granularity === "day"
-        ? sql`(${tradeProfits.sellDate} AT TIME ZONE ${tz})::date`
+        ? sql`(${tradeProfits.sellDate}::timestamp AT TIME ZONE ${tz})::date`
         : input.granularity === "week"
-          ? sql`date_trunc('week', ${tradeProfits.sellDate} AT TIME ZONE ${tz})::date`
-          : sql`date_trunc('month', ${tradeProfits.sellDate} AT TIME ZONE ${tz})::date`;
+          ? sql`date_trunc('week', ${tradeProfits.sellDate}::timestamp AT TIME ZONE ${tz})::date`
+          : sql`date_trunc('month', ${tradeProfits.sellDate}::timestamp AT TIME ZONE ${tz})::date`;
 
       const conditions = [
         eq(tradeProfits.userId, userId),
@@ -74,8 +75,8 @@ export const analyticsRouter = router({
         })
         .from(tradeProfits)
         .where(and(...conditions))
-        .groupBy(dateTrunc)
-        .orderBy(dateTrunc);
+        .groupBy(sql`1`)
+        .orderBy(sql`1`);
 
       // Compute cumulative sum
       let cumulative = 0n;

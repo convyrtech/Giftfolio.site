@@ -39,7 +39,7 @@ export const statsRouter = router({
         pnlConditions.push(
           gte(
             trades.sellDate,
-            sql`(CURRENT_DATE AT TIME ZONE ${tz} - make_interval(days => ${days}))::date`,
+            sql`(CURRENT_TIMESTAMP AT TIME ZONE ${tz} - make_interval(days => ${days}))::date`,
           ),
         );
       }

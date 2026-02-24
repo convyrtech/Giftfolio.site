@@ -64,7 +64,9 @@ export const telegramPlugin = () => {
             return ctx.json({ error: "Auth data expired" }, { status: 401 });
           }
 
-          if (!verifyTelegramAuth(body, botToken)) {
+          // Exclude non-Telegram fields (timezone is added by our client, not signed by Telegram)
+          const { timezone: _tz, ...telegramFields } = body;
+          if (!verifyTelegramAuth(telegramFields, botToken)) {
             return ctx.json({ error: "Invalid Telegram auth data" }, { status: 401 });
           }
 
