@@ -17,6 +17,12 @@ export const metadata: Metadata = {
   title: "Giftfolio — Telegram Gift Trading Tracker",
   description: "Track your Telegram gift trades and PnL",
   robots: { index: false, follow: false },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Giftfolio",
+  },
 };
 
 export const viewport: Viewport = {

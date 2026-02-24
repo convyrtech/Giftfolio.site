@@ -131,14 +131,26 @@ export default function SettingsPage(): React.ReactElement {
 
           <div className="space-y-2">
             <Label htmlFor="timezone">Timezone</Label>
-            <Input
-              id="timezone"
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              placeholder="Europe/Moscow"
-            />
+            <div className="flex gap-2">
+              <Input
+                id="timezone"
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                placeholder="Europe/Moscow"
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 self-center"
+                onClick={() => setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone)}
+              >
+                Detect
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
-              Current: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+              Browser: {Intl.DateTimeFormat().resolvedOptions().timeZone}
             </p>
           </div>
         </CardContent>
