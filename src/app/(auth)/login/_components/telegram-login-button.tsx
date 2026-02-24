@@ -88,7 +88,7 @@ export function TelegramLoginButton(): React.ReactElement {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div ref={containerRef} className="flex items-center justify-center" />
+      <div ref={containerRef} className="flex min-h-[40px] items-center justify-center rounded-xl bg-white/90 px-4 py-2" />
       {error && <p className="text-destructive text-xs">{error}</p>}
     </div>
   );
