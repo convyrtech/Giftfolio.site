@@ -4,7 +4,7 @@ import { cache } from "react";
 import { headers } from "next/headers";
 import { db } from "@/server/db";
 import { auth } from "@/server/auth";
-import { mutationRateLimit, publicRateLimit } from "@/lib/rate-limit";
+import { mutationRateLimit } from "@/lib/rate-limit";
 
 export const createTRPCContext = cache(async () => {
   const headersList = await headers();
@@ -52,21 +52,3 @@ export const rateLimitedProcedure = protectedProcedure.use(async (opts) => {
   return opts.next();
 });
 
-/**
- * Public procedure with IP-based rate limiting (60 req/60s).
- * For unauthenticated endpoints like market data.
- */
-export const publicRateLimitedProcedure = t.procedure.use(async (opts) => {
-  const headersList = opts.ctx.headers;
-  const forwarded = headersList.get("x-forwarded-for");
-  // Take first IP from x-forwarded-for (may be comma-separated list)
-  const rawIp = forwarded ? forwarded.split(",")[0]?.trim() : null;
-  // Validate basic IP format (v4 or v6), fallback to global key
-  const ip =
-    rawIp && /^[\d.:a-fA-F]+$/.test(rawIp) ? rawIp : "public:global";
-  const { success } = await publicRateLimit.limit(ip);
-  if (!success) {
-    throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Rate limit exceeded" });
-  }
-  return opts.next();
-});

@@ -7,6 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { auth } from "@/server/auth";
 import { PublicNav } from "./_components/public-nav";
+import { PublicHeaderActions } from "./_components/public-header-actions";
 
 // Deduplicate session fetch across layout + any child RSC in the same render tree.
 const getSession = cache(async () => {
@@ -61,6 +62,7 @@ export default async function PublicLayout({
                 Sign in with Telegram
               </Link>
             )}
+            <PublicHeaderActions isLoggedIn={!!session} />
           </div>
         </div>
       </header>

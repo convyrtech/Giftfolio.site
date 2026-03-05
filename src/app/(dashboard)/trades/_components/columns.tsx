@@ -305,7 +305,9 @@ export const columns: ColumnDef<Trade>[] = [
       }
 
       const floorPrices = table.options.meta?.floorPrices ?? {};
-      const floorStars = floorPrices[trade.giftName];
+      // gift-bubbles keys are normalized: "EasterEgg" → "easteregg"
+      const normalizedName = trade.giftName.toLowerCase().replace(/[\s-]/g, "");
+      const floorStars = floorPrices[normalizedName];
       if (floorStars === undefined || floorStars <= 0) {
         return <span className="block text-right text-xs text-muted-foreground">N/A</span>;
       }
