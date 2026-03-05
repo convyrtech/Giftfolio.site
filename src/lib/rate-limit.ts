@@ -9,6 +9,12 @@ function createRedis(): Redis | null {
       token: env.UPSTASH_REDIS_REST_TOKEN,
     });
   }
+  // In production, rate limiting must be configured — fail hard at startup
+  if (env.NODE_ENV === "production") {
+    throw new Error(
+      "Rate limiting requires UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in production",
+    );
+  }
   return null;
 }
 
@@ -44,6 +50,16 @@ const importLimiter = redis
     })
   : null;
 
+/** Public read endpoints (market): 60 requests per 60s per IP */
+const publicReadLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(60, "60 s"),
+      prefix: "rl:public",
+      analytics: false,
+    })
+  : null;
+
 /** Rate limit check — returns { success: true } if no Redis (dev mode passthrough) */
 async function check(limiter: Ratelimit | null, key: string): Promise<{ success: boolean }> {
   if (!limiter) return { success: true };
@@ -53,3 +69,4 @@ async function check(limiter: Ratelimit | null, key: string): Promise<{ success:
 export const authRateLimit = { limit: (key: string) => check(authLimiter, key) };
 export const mutationRateLimit = { limit: (key: string) => check(mutationLimiter, key) };
 export const importRateLimit = { limit: (key: string) => check(importLimiter, key) };
+export const publicRateLimit = { limit: (key: string) => check(publicReadLimiter, key) };

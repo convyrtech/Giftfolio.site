@@ -14,7 +14,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // Root → redirect based on auth state
   if (pathname === "/") {
     if (sessionCookie) return NextResponse.redirect(new URL("/trades", request.url));
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/market", request.url));
   }
 
   // Authenticated user hitting login → redirect to trades

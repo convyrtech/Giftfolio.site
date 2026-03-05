@@ -4,21 +4,16 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { BarChart3, TrendingUp, Settings, LogOut, Gift, Sun, Moon } from "lucide-react";
+import { LogOut, Gift, Sun, Moon } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
+import { navItems } from "@/lib/nav-items";
 
 interface DashboardShellProps {
   user: { id: string; name?: string | null; image?: string | null };
   children: React.ReactNode;
 }
-
-const navItems = [
-  { href: "/trades", label: "Trades", icon: BarChart3 },
-  { href: "/analytics", label: "Analytics", icon: TrendingUp },
-  { href: "/settings", label: "Settings", icon: Settings },
-] as const;
 
 export function DashboardShell({ user, children }: DashboardShellProps): React.ReactElement {
   const pathname = usePathname();
