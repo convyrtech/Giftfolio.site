@@ -708,16 +708,63 @@ export const tradesRouter = router({
         });
       }
 
+      // Sell-side: find open positions matching each detected sell event
+      const sellTrades = result.trades.filter((t) => t.side === "sell");
+
+      interface SellMatchRow {
+        eventId: string;
+        giftName: string;
+        giftNumber: number;
+        priceNanoton: string;
+        timestamp: number;
+        matchedTradeId: string | null; // bigint serialized as string for JSON
+        matchedBuyDate: string | null; // ISO date string
+      }
+
+      const sellMatches: SellMatchRow[] = [];
+
+      for (const sell of sellTrades) {
+        const giftSlug = buildGiftPascalSlug(sell.giftName, sell.giftNumber);
+        // Find oldest open position for this gift (FIFO)
+        const [match] = await ctx.db
+          .select({ id: trades.id, buyDate: trades.buyDate })
+          .from(trades)
+          .where(
+            and(
+              eq(trades.userId, userId),
+              eq(trades.giftSlug, giftSlug),
+              eq(trades.giftNumber, BigInt(sell.giftNumber)),
+              isNull(trades.sellDate),
+              isNull(trades.deletedAt),
+            ),
+          )
+          .orderBy(trades.buyDate) // FIFO: oldest open position first
+          .limit(1);
+
+        sellMatches.push({
+          eventId: sell.eventId,
+          giftName: sell.giftName,
+          giftNumber: sell.giftNumber,
+          priceNanoton: sell.priceNanoton.toString(),
+          timestamp: sell.timestamp,
+          matchedTradeId: match?.id.toString() ?? null,
+          matchedBuyDate: match?.buyDate?.toISOString() ?? null,
+        });
+      }
+
       // Serialize bigint prices as strings for JSON transport
       return {
-        trades: result.trades.map((t) => ({
-          giftName: t.giftName,
-          giftNumber: t.giftNumber,
-          side: t.side,
-          priceNanoton: t.priceNanoton.toString(),
-          timestamp: t.timestamp,
-          eventId: t.eventId,
-        })),
+        trades: result.trades
+          .filter((t) => t.side === "buy")
+          .map((t) => ({
+            giftName: t.giftName,
+            giftNumber: t.giftNumber,
+            side: t.side,
+            priceNanoton: t.priceNanoton.toString(),
+            timestamp: t.timestamp,
+            eventId: t.eventId,
+          })),
+        sellMatches,
         eventsFetched: result.eventsFetched,
         rateLimited: result.rateLimited,
       };
