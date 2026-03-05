@@ -117,6 +117,7 @@ async function fetchAndCache(): Promise<GiftBubblesResult> {
  * Uses item #1 as the representative collection image.
  */
 export function getCollectionImageUrl(name: string): string {
-  const nameLower = name.toLowerCase().replace(/[\s-]/g, "");
+  // Remove spaces, hyphens, apostrophes and other non-alphanumeric chars
+  const nameLower = name.toLowerCase().replace(/[^a-z0-9]/g, "");
   return `https://nft.fragment.com/gift/${nameLower}-1.webp`;
 }

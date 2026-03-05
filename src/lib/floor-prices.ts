@@ -20,7 +20,7 @@ export async function getFloorPrices(): Promise<Record<string, number>> {
 
   for (const item of items) {
     // Normalize: "Easter Egg" → "easteregg" to match trade.giftName lookup
-    const key = item.name.toLowerCase().replace(/[\s-]/g, "");
+    const key = item.name.toLowerCase().replace(/[^a-z0-9]/g, "");
     const floorStars = Math.round(item.floorprice_usd / starsUsdRate);
     if (floorStars > 0) {
       result[key] = floorStars;
