@@ -115,11 +115,10 @@ export function ImportWalletDialog({
     setEventsFetched(0);
     setWasRateLimited(false);
     setResult(null);
-    // Sync walletInput back to current saved address on close — no useEffect needed
     setWalletInput(savedWalletAddress ?? "");
   }, [savedWalletAddress]);
 
-  const handleClose = useCallback(
+  const handleOpenChange = useCallback(
     (isOpen: boolean) => {
       onOpenChange(isOpen);
       if (!isOpen) reset();
@@ -234,7 +233,7 @@ export function ImportWalletDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl">
         {step === "scan" && (
           <>
@@ -268,7 +267,7 @@ export function ImportWalletDialog({
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => handleClose(false)}>
+              <Button variant="outline" onClick={() => handleOpenChange(false)}>
                 Cancel
               </Button>
               <Button
@@ -532,7 +531,7 @@ export function ImportWalletDialog({
             </div>
 
             <DialogFooter>
-              <Button onClick={() => handleClose(false)}>Done</Button>
+              <Button onClick={() => handleOpenChange(false)}>Done</Button>
             </DialogFooter>
           </>
         )}

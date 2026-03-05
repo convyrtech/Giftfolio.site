@@ -146,6 +146,7 @@ export function TradesToolbar({
       <TradeFormDialog open={showForm} onOpenChange={setShowForm} />
       <ImportCsvDialog open={showImport} onOpenChange={setShowImport} />
       <ImportWalletDialog
+        key={String(showWalletImport)}
         open={showWalletImport}
         onOpenChange={setShowWalletImport}
         savedWalletAddress={settings?.tonWalletAddress}

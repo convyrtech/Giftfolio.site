@@ -1,31 +1,43 @@
-# Session State — 2026-02-24
+# Session State
 
-## Current Phase
-Phase 8: Floor Prices + Gift Attributes — **COMPLETE, ready for commit**
+## Last Updated: 2026-03-05
 
-## What Was Done
-- `calculateUnrealizedPnl()` added to pnl-engine.ts with NaN/0/negative/Infinity guards
-- Floor/PnL column in trades table (Stars open trades show unrealized PnL, TON shows floor only)
-- Attribute badges in Gift column — checks all 3 rarity fields (model/backdrop/symbol), tooltip shows all 6 attrs
-- floorPrices query in trades-table.tsx with 1h staleTime
-- Self-review done: fixed 2 CRITICAL + 3 WARNING issues
-- 96/96 tests pass, tsc 0 errors, lint 0 errors, build success
+## Current Status: IDLE — all work committed and pushed
 
-## Files Modified (uncommitted)
-- `src/lib/pnl-engine.ts` — calculateUnrealizedPnl + UnrealizedPnlResult
-- `src/app/(dashboard)/trades/_components/columns.tsx` — Floor/PnL column, attribute badges, sellPrice check
-- `src/app/(dashboard)/trades/_components/trades-table.tsx` — floorPrices query + tableMeta + skeleton update
-- `src/lib/__tests__/pnl-engine.test.ts` — 10 unrealized PnL tests (6 base + 4 edge cases)
+## Completed This Session
+1. TON wallet auto-import (buy-side) — commit 79c7209
+2. PascalCase slug fix for wallet/CSV imports — commit 66b58c4
+3. Rate-limit lazy init fix — commit 79c7209
+4. Wallet sell-side auto-match — commits 0e73fa1..36bb166
+5. Self-audit fixes — commit 67ca8d3
+   - Sell errors shown in result step
+   - Description hides "0 sales" when no sells
+   - try/catch in handleConfirm (no floating promise)
+   - Removed dead PreviewTrade.side field
 
-## Git State
-Branch: main, last commit: ba1e657 (Phase 7D review)
-Phase 8 changes ready for commit.
+## Key Files Modified (this session)
+- `src/server/api/routers/trades.ts` — walletImportPreview + walletImportConfirm + walletSellConfirm
+- `src/server/api/routers/settings.ts` — updateWalletAddress (upsert)
+- `src/lib/ton-import.ts` — TonAPI client, Zod parse for normalizeWalletAddress
+- `src/lib/gift-parser.ts` — giftNameToPascalCase + buildGiftPascalSlug
+- `src/app/(dashboard)/trades/_components/import-wallet-dialog.tsx` — full dialog with sells tab
+- `src/app/(dashboard)/trades/_components/trades-toolbar.tsx` — Wallet button
+- `src/app/(dashboard)/settings/page.tsx` — TON wallet card
+- `src/server/db/schema.ts` — ton_wallet_address column
+- `src/proxy.ts` — Next.js 16 middleware migration
+- `src/lib/rate-limit.ts` — lazy production check
 
-## Next Steps
-1. **Commit Phase 8**
-2. **Phase 9**: Tech Debt Sprint — global error.tsx, noUncheckedIndexedAccess, delete unused aggregateStats calls, CommissionOverride extract, maxPages limit
-3. **Phase 10**: Gift Search/Autocomplete — cmdk + gifts.catalog endpoint
-4. **Phase 11**: Analytics/Charts — Recharts, 3 charts, analyticsRouter
+## Verification Status
+- tsc: PASS
+- lint: PASS (2 pre-existing TanStack warnings)
+- tests: 137/137 PASS
+- build: PASS
+- pushed to Railway: YES
 
-## Roadmap
-Full plan: `docs/plans/2026-02-23-roadmap-phase8-14.md`
+## Known Pre-existing Dead Code
+- `DetectedTrade.giftSlug` + `buildGiftSlug` in ton-import.ts (lowercase slug, unused in router)
+
+## Next Options
+- End-to-end test: BotFather /setdomain localhost → test full wallet scan+import flow
+- Phase 14: Excel/PDF export (optional)
+- Clean up dead giftSlug in DetectedTrade
