@@ -939,7 +939,7 @@ export const tradesRouter = router({
         const [trade] = await ctx.db
           .select({ id: trades.id, sellDate: trades.sellDate })
           .from(trades)
-          .where(and(eq(trades.id, sell.tradeId), eq(trades.userId, userId)))
+          .where(and(eq(trades.id, sell.tradeId), eq(trades.userId, userId), isNull(trades.deletedAt)))
           .limit(1);
 
         if (!trade) {
@@ -952,17 +952,21 @@ export const tradesRouter = router({
         }
 
         const noteAppend = `Sell imported from wallet (event: ${sell.eventId})`;
-        await ctx.db
-          .update(trades)
-          .set({
-            sellPrice: BigInt(sell.priceNanoton),
-            sellDate: new Date(sell.timestamp * 1000),
-            sellRateUsd: tonRateStr,
-            notes: sql`COALESCE(${trades.notes} || E'\n', '') || ${noteAppend}`,
-          })
-          .where(and(eq(trades.id, sell.tradeId), eq(trades.userId, userId)));
-
-        closed++;
+        try {
+          await ctx.db
+            .update(trades)
+            .set({
+              sellPrice: BigInt(sell.priceNanoton),
+              sellDate: new Date(sell.timestamp * 1000),
+              sellRateUsd: tonRateStr,
+              updatedAt: new Date(),
+              notes: sql`COALESCE(${trades.notes} || E'\n', '') || ${noteAppend}`,
+            })
+            .where(and(eq(trades.id, sell.tradeId), eq(trades.userId, userId), isNull(trades.deletedAt)));
+          closed++;
+        } catch {
+          errors.push({ eventId: sell.eventId, message: "Failed to close position" });
+        }
       }
 
       return { closed, skipped: errors.length, errors };
