@@ -152,9 +152,10 @@ async function normalizeWalletAddress(address: string): Promise<string> {
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) return address.toLowerCase();
-    const data = (await res.json()) as { address?: string };
+    const raw: unknown = await res.json();
+    const parsed = z.object({ address: z.string().optional() }).safeParse(raw);
     // `address` field is the raw form: "0:abcdef..."
-    return (data.address ?? address).toLowerCase();
+    return ((parsed.success ? parsed.data.address : undefined) ?? address).toLowerCase();
   } catch {
     return address.toLowerCase();
   }

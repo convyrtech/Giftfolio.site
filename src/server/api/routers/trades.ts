@@ -51,6 +51,16 @@ const tradeInput = z.object({
   { message: "Sell date cannot be before buy date", path: ["sellDate"] },
 );
 
+type SellMatchRow = {
+  eventId: string;
+  giftName: string;
+  giftNumber: number;
+  priceNanoton: string;
+  timestamp: number;
+  matchedTradeId: string | null;
+  matchedBuyDate: string | null;
+};
+
 export const tradesRouter = router({
   list: protectedProcedure
     .input(
@@ -711,45 +721,72 @@ export const tradesRouter = router({
       // Sell-side: find open positions matching each detected sell event
       const sellTrades = result.trades.filter((t) => t.side === "sell");
 
-      interface SellMatchRow {
-        eventId: string;
-        giftName: string;
-        giftNumber: number;
-        priceNanoton: string;
-        timestamp: number;
-        matchedTradeId: string | null; // bigint serialized as string for JSON
-        matchedBuyDate: string | null; // ISO date string
-      }
-
       const sellMatches: SellMatchRow[] = [];
 
-      for (const sell of sellTrades) {
-        const giftSlug = buildGiftPascalSlug(sell.giftName, sell.giftNumber);
-        // Find oldest open position for this gift (FIFO)
-        const [match] = await ctx.db
-          .select({ id: trades.id, buyDate: trades.buyDate })
-          .from(trades)
-          .where(
-            and(
-              eq(trades.userId, userId),
-              eq(trades.giftSlug, giftSlug),
-              eq(trades.giftNumber, BigInt(sell.giftNumber)),
-              isNull(trades.sellDate),
-              isNull(trades.deletedAt),
-            ),
-          )
-          .orderBy(trades.buyDate) // FIFO: oldest open position first
-          .limit(1);
+      if (sellTrades.length > 0) {
+        // Batch: one query for all sell gifts, match in memory (avoids N+1)
+        const sellSlugs = sellTrades.map((s) =>
+          buildGiftPascalSlug(s.giftName, s.giftNumber),
+        );
 
-        sellMatches.push({
-          eventId: sell.eventId,
-          giftName: sell.giftName,
-          giftNumber: sell.giftNumber,
-          priceNanoton: sell.priceNanoton.toString(),
-          timestamp: sell.timestamp,
-          matchedTradeId: match?.id.toString() ?? null,
-          matchedBuyDate: match?.buyDate?.toISOString() ?? null,
-        });
+        let openPositions: Array<{
+          id: bigint;
+          buyDate: Date;
+          giftSlug: string;
+          giftNumber: bigint | null;
+        }> = [];
+        try {
+          openPositions = await ctx.db
+            .select({
+              id: trades.id,
+              buyDate: trades.buyDate,
+              giftSlug: trades.giftSlug,
+              giftNumber: trades.giftNumber,
+            })
+            .from(trades)
+            .where(
+              and(
+                eq(trades.userId, userId),
+                inArray(trades.giftSlug, sellSlugs),
+                isNull(trades.sellDate),
+                isNull(trades.deletedAt),
+              ),
+            )
+            .orderBy(trades.buyDate); // FIFO: ascending buyDate
+        } catch {
+          // If DB lookup fails, return all sells as unmatched — preview still shows buys
+          openPositions = [];
+        }
+
+        // Match each sell to the oldest unused open position (FIFO)
+        const usedTradeIds = new Set<string>();
+
+        for (const sell of sellTrades) {
+          const slug = buildGiftPascalSlug(sell.giftName, sell.giftNumber);
+          const giftNum = BigInt(sell.giftNumber);
+
+          // Find oldest unused open position for this slug+number
+          const match = openPositions.find(
+            (p) =>
+              p.giftSlug === slug &&
+              p.giftNumber === giftNum &&
+              !usedTradeIds.has(p.id.toString()),
+          );
+
+          if (match) {
+            usedTradeIds.add(match.id.toString());
+          }
+
+          sellMatches.push({
+            eventId: sell.eventId,
+            giftName: sell.giftName,
+            giftNumber: sell.giftNumber,
+            priceNanoton: sell.priceNanoton.toString(),
+            timestamp: sell.timestamp,
+            matchedTradeId: match?.id.toString() ?? null,
+            matchedBuyDate: match?.buyDate?.toISOString() ?? null,
+          });
+        }
       }
 
       // Serialize bigint prices as strings for JSON transport
