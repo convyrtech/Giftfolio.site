@@ -10,6 +10,16 @@ Steamfolio.com clone for tracking Telegram gift trade PnL. Dark theme, table-cen
 5. **NO TOKEN ECONOMY** — never sacrifice quality to save tokens
 6. **SELF-REVIEW** — after every feature/phase: review ALL changed files with code-reviewer agent
 7. **VERIFY BEFORE DONE** — run full verification chain before any "done" claim
+8. **NO LAZY SOLUTIONS** — when something is hard or tedious, solve it correctly. Never use `any` instead of the right type, never use a brittle workaround instead of the proper API, never skip a plan item because it "seems not critical". A lazy solution is always worse than no solution.
+
+## MANDATORY SELF-AUDIT QUESTIONS (ask after EVERY implementation)
+Before calling anything done, answer each question out loud:
+1. **Where did I take the quick/lazy path instead of the correct one?** (types, APIs, approaches)
+2. **What did I implement incompletely or quietly skip from the plan?** (missing items, deferred without note)
+3. **What did I verify only in theory but never actually tested end-to-end?** (ran dev server? clicked through UI?)
+4. **What reviewer warnings did I dismiss as "pre-existing" or "not critical" — and was that justified?**
+5. **Is there any dead code I wrote that never actually runs?** (middleware intercepts before? wrong route group?)
+6. **For every exported function/component: is it actually used somewhere, and does it work correctly?**
 
 ## MANDATORY WORKFLOW FOR EVERY TASK
 
