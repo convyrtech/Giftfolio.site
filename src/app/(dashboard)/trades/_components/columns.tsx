@@ -5,7 +5,6 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
-import { formatDate } from "@/lib/formatters";
 import { formatStars, formatTon, type Stars, type NanoTon } from "@/lib/currencies";
 import { calculateProfit, calculateUnrealizedPnl } from "@/lib/pnl-engine";
 import { getGiftImageUrl } from "@/lib/gift-parser";
@@ -16,12 +15,22 @@ import {
 } from "@/components/ui/tooltip";
 import type { Trade } from "@/server/db/schema";
 import { TradeRowActions } from "./trade-row-actions";
+import { InlineDateCell } from "./inline-date-cell";
+import { InlinePriceCell } from "./inline-price-cell";
+
+export interface InlineUpdateFields {
+  buyDate?: Date;
+  buyPrice?: bigint;
+  sellDate?: Date;
+  sellPrice?: bigint;
+}
 
 export interface TradesTableMeta {
   onEdit: (trade: Trade) => void;
   onDelete: (trade: Trade) => void;
   onToggleHidden: (trade: Trade) => void;
   onToggleExclude: (trade: Trade) => void;
+  onInlineUpdate: (id: bigint, fields: InlineUpdateFields) => Promise<void>;
   floorPrices: Record<string, number>;
 }
 
@@ -33,6 +42,7 @@ declare module "@tanstack/react-table" {
     onDelete: (trade: Trade) => void;
     onToggleHidden: (trade: Trade) => void;
     onToggleExclude: (trade: Trade) => void;
+    onInlineUpdate: (id: bigint, fields: InlineUpdateFields) => Promise<void>;
     floorPrices: Record<string, number>;
   }
 }
@@ -184,41 +194,65 @@ export const columns: ColumnDef<Trade>[] = [
   {
     accessorKey: "buyDate",
     header: "Bought",
-    cell: ({ row }) => (
-      <span className="text-sm">{formatDate(row.original.buyDate)}</span>
+    cell: ({ row, table }) => (
+      <InlineDateCell
+        value={row.original.buyDate}
+        maxDate={row.original.sellDate ?? undefined}
+        onSave={(date) =>
+          table.options.meta!.onInlineUpdate(row.original.id, { buyDate: date })
+        }
+      />
     ),
     size: 100,
   },
   {
     accessorKey: "sellDate",
     header: "Sold",
-    cell: ({ row }) => (
-      <span className="text-sm">
-        {row.original.sellDate ? formatDate(row.original.sellDate) : "\u2014"}
-      </span>
+    cell: ({ row, table }) => (
+      <InlineDateCell
+        value={row.original.sellDate}
+        minDate={row.original.buyDate}
+        placeholder="—"
+        onSave={(date) =>
+          table.options.meta!.onInlineUpdate(row.original.id, { sellDate: date })
+        }
+      />
     ),
     size: 100,
   },
   {
     accessorKey: "buyPrice",
     header: () => <span className="block text-right">Buy Price</span>,
-    cell: ({ row }) => (
-      <span className="block text-right tabular-nums text-sm">
-        {formatPrice(row.original.buyPrice, row.original.tradeCurrency)}
-      </span>
+    cell: ({ row, table }) => (
+      <InlinePriceCell
+        value={row.original.buyPrice}
+        currency={row.original.tradeCurrency}
+        onSave={(price) =>
+          table.options.meta!.onInlineUpdate(row.original.id, { buyPrice: price })
+        }
+      />
     ),
     size: 120,
   },
   {
     accessorKey: "sellPrice",
     header: () => <span className="block text-right">Sell Price</span>,
-    cell: ({ row }) => (
-      <span className="block text-right tabular-nums text-sm">
-        {row.original.sellPrice !== null
-          ? formatPrice(row.original.sellPrice, row.original.tradeCurrency)
-          : "\u2014"}
-      </span>
-    ),
+    cell: ({ row, table }) => {
+      if (row.original.sellPrice === null) {
+        return (
+          <span className="block text-right text-sm text-muted-foreground">—</span>
+        );
+      }
+      return (
+        <InlinePriceCell
+          value={row.original.sellPrice}
+          currency={row.original.tradeCurrency}
+          onSave={(price) =>
+            table.options.meta!.onInlineUpdate(row.original.id, { sellPrice: price })
+          }
+        />
+      );
+    },
     size: 120,
   },
   {

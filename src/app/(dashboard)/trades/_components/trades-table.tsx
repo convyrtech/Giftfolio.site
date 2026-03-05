@@ -76,6 +76,15 @@ export function TradesTable({
     onError: (err) => toast.error(err.message),
   });
 
+  const inlineUpdate = trpc.trades.update.useMutation({
+    onSuccess: () => {
+      void utils.trades.list.invalidate();
+      void utils.stats.dashboard.invalidate();
+      void utils.analytics.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const { data: floorPrices = {} } = trpc.market.floorPrices.useQuery(undefined, {
     staleTime: 60 * 60 * 1000, // 1h — matches server cache TTL
   });
@@ -85,6 +94,9 @@ export function TradesTable({
     onDelete: setDeleteTrade,
     onToggleHidden: (trade) => toggleHidden.mutate({ id: trade.id }),
     onToggleExclude: (trade) => toggleExclude.mutate({ id: trade.id }),
+    onInlineUpdate: async (id, fields) => {
+      await inlineUpdate.mutateAsync({ id, ...fields });
+    },
     floorPrices,
   };
 

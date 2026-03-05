@@ -246,6 +246,8 @@ export const tradesRouter = router({
     .input(
       z.object({
         id: z.coerce.bigint(),
+        buyPrice: z.coerce.bigint().min(0n).optional(),
+        buyDate: z.coerce.date().optional(),
         sellPrice: z.coerce.bigint().min(0n).optional(),
         sellDate: z.coerce.date().optional(),
         sellMarketplace: marketplaceEnum.optional(),
@@ -280,10 +282,33 @@ export const tradesRouter = router({
         });
       }
 
+      // Validate buyDate does not exceed sellDate
+      const finalBuyDate = input.buyDate !== undefined ? input.buyDate : existing.buyDate;
+      if (finalSellDate && finalBuyDate > finalSellDate) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Buy date cannot be after sell date",
+        });
+      }
+
       const updateData: Partial<Trade> = {
         updatedAt: new Date(),
       };
 
+      if (input.buyPrice !== undefined) {
+        updateData.buyPrice = input.buyPrice;
+      }
+      if (input.buyDate !== undefined) {
+        updateData.buyDate = input.buyDate;
+
+        // Re-lock buy rate to the corrected date (mirrors sellDate rate-locking pattern)
+        if (existing.tradeCurrency === "STARS") {
+          updateData.buyRateUsd = getStarsUsdRate().toString();
+        } else {
+          const tonRate = await getTonUsdRate();
+          updateData.buyRateUsd = tonRate?.toString() ?? null;
+        }
+      }
       if (input.sellPrice !== undefined) {
         updateData.sellPrice = input.sellPrice;
       }
