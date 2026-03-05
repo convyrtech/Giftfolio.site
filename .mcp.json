@@ -30,6 +30,16 @@
       "env": {
         "NEON_API_KEY": "${NEON_API_KEY}"
       }
+    },
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from", "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context", "ide-assistant",
+        "--project", "E:/giftsite"
+      ]
     }
   }
 }
