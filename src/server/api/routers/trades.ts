@@ -900,6 +900,74 @@ export const tradesRouter = router({
       return { inserted, skipped: errors.length, errors };
     }),
 
+  walletSellConfirm: rateLimitedProcedure
+    .input(
+      z.object({
+        sells: z
+          .array(
+            z.object({
+              tradeId: z.coerce.bigint().positive(),
+              priceNanoton: z.string().regex(/^\d+$/, "Must be a non-negative integer string"),
+              timestamp: z.number().int().positive(),
+              eventId: z.string().min(1).max(200).regex(/^[a-zA-Z0-9\-_]+$/, "Invalid event ID"),
+            }),
+          )
+          .min(1)
+          .max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+
+      // Rate limit: shared with CSV/wallet import (5/hour)
+      const rl = await importRateLimit.limit(userId);
+      if (!rl.success) {
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Import rate limit exceeded. Try again later.",
+        });
+      }
+
+      const tonRate = await getTonUsdRate();
+      const tonRateStr = tonRate?.toString() ?? null;
+
+      let closed = 0;
+      const errors: Array<{ eventId: string; message: string }> = [];
+
+      for (const sell of input.sells) {
+        // Security: verify ownership before any update
+        const [trade] = await ctx.db
+          .select({ id: trades.id, sellDate: trades.sellDate })
+          .from(trades)
+          .where(and(eq(trades.id, sell.tradeId), eq(trades.userId, userId)))
+          .limit(1);
+
+        if (!trade) {
+          errors.push({ eventId: sell.eventId, message: "Trade not found" });
+          continue;
+        }
+        if (trade.sellDate !== null) {
+          errors.push({ eventId: sell.eventId, message: "Position already closed" });
+          continue;
+        }
+
+        const noteAppend = `Sell imported from wallet (event: ${sell.eventId})`;
+        await ctx.db
+          .update(trades)
+          .set({
+            sellPrice: BigInt(sell.priceNanoton),
+            sellDate: new Date(sell.timestamp * 1000),
+            sellRateUsd: tonRateStr,
+            notes: sql`COALESCE(${trades.notes} || E'\n', '') || ${noteAppend}`,
+          })
+          .where(and(eq(trades.id, sell.tradeId), eq(trades.userId, userId)));
+
+        closed++;
+      }
+
+      return { closed, skipped: errors.length, errors };
+    }),
+
   exportCsv: protectedProcedure
     .input(
       z.object({
