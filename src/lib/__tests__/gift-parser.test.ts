@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseGiftUrl, getGiftImageUrl, getGiftTelegramUrl } from "../gift-parser";
+import { parseGiftUrl, getGiftImageUrl, getGiftTelegramUrl, giftNameToPascalCase, buildGiftPascalSlug } from "../gift-parser";
 
 describe("parseGiftUrl", () => {
   it("parses full HTTPS URL", () => {
@@ -99,5 +99,30 @@ describe("getGiftImageUrl", () => {
 describe("getGiftTelegramUrl", () => {
   it("builds correct Telegram URL", () => {
     expect(getGiftTelegramUrl("PlushPepe-123")).toBe("https://t.me/nft/PlushPepe-123");
+  });
+});
+
+describe("giftNameToPascalCase", () => {
+  it("converts two-word name", () => {
+    expect(giftNameToPascalCase("Easter Egg")).toBe("EasterEgg");
+  });
+  it("converts single word", () => {
+    expect(giftNameToPascalCase("Durov")).toBe("Durov");
+  });
+  it("strips apostrophes within word", () => {
+    expect(giftNameToPascalCase("Durov's Cap")).toBe("DurovsCap");
+  });
+  it("handles three words", () => {
+    expect(giftNameToPascalCase("Plush Pepe Hat")).toBe("PlushPepeHat");
+  });
+});
+
+describe("buildGiftPascalSlug", () => {
+  it("produces canonical slug matching parseGiftUrl output", () => {
+    expect(buildGiftPascalSlug("Easter Egg", 1234)).toBe("EasterEgg-1234");
+  });
+  it("produces slug that getGiftTelegramUrl accepts correctly", () => {
+    const slug = buildGiftPascalSlug("Plush Pepe", 42);
+    expect(getGiftTelegramUrl(slug)).toBe("https://t.me/nft/PlushPepe-42");
   });
 });

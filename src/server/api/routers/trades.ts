@@ -3,11 +3,11 @@ import { TRPCError } from "@trpc/server";
 import { and, eq, isNull, isNotNull, desc, inArray, sql } from "drizzle-orm";
 import { router, protectedProcedure, rateLimitedProcedure } from "../trpc";
 import { trades, type Trade, userSettings } from "@/server/db/schema";
-import { parseGiftUrl, getGiftTelegramUrl } from "@/lib/gift-parser";
+import { parseGiftUrl, getGiftTelegramUrl, buildGiftPascalSlug, giftNameToPascalCase } from "@/lib/gift-parser";
 import { getTonUsdRate, getStarsUsdRate } from "@/lib/exchange-rates";
 import { importRowSchema } from "@/lib/csv-import-schema";
 import { importRateLimit } from "@/lib/rate-limit";
-import { importTradesFromWallet, buildGiftSlug } from "@/lib/ton-import";
+import { importTradesFromWallet } from "@/lib/ton-import";
 
 const sortColumns = ["buy_date", "sell_date", "buy_price", "sell_price", "created_at"] as const;
 const marketplaceEnum = z.enum(["fragment", "getgems", "tonkeeper", "p2p", "other"]);
@@ -586,11 +586,12 @@ export const tradesRouter = router({
         let giftNumber: bigint | null = null;
 
         if (row.giftNumber) {
-          giftSlug = `${row.giftName}-${row.giftNumber}`;
+          const num = parseInt(row.giftNumber, 10);
+          giftSlug = buildGiftPascalSlug(row.giftName, num);
           giftLink = getGiftTelegramUrl(giftSlug);
-          giftNumber = BigInt(row.giftNumber);
+          giftNumber = BigInt(num);
         } else {
-          giftSlug = `${row.giftName}-batch-${crypto.randomUUID()}`;
+          giftSlug = `${giftNameToPascalCase(row.giftName)}-batch-${crypto.randomUUID()}`;
         }
 
         const rateStr = row.tradeCurrency === "TON"
@@ -766,8 +767,8 @@ export const tradesRouter = router({
       const tonRateStr = tonRate?.toString() ?? null;
 
       const values = input.trades.map((t) => {
-        // Re-derive giftSlug server-side — never trust client-supplied slug
-        const giftSlug = buildGiftSlug(t.giftName, t.giftNumber);
+        // Re-derive giftSlug server-side in canonical PascalCase format — never trust client
+        const giftSlug = buildGiftPascalSlug(t.giftName, t.giftNumber);
         const giftLink = getGiftTelegramUrl(giftSlug);
         const buyDate = new Date(t.timestamp * 1000);
 

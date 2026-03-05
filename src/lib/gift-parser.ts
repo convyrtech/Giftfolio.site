@@ -78,6 +78,30 @@ export function pascalCaseToSpaces(name: string): string {
 }
 
 /**
+ * Convert a human-readable gift name to PascalCase for use in slugs/URLs.
+ * "Easter Egg" → "EasterEgg"
+ * "Durov's Cap" → "DurovsСap"
+ * Splits on whitespace, strips non-alphanumeric within each word, capitalizes first letter.
+ */
+export function giftNameToPascalCase(name: string): string {
+  return name
+    .split(/\s+/)
+    .map((word) => word.replace(/[^a-zA-Z0-9]/g, ""))
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join("");
+}
+
+/**
+ * Build a gift slug in the canonical PascalCase-{number} format used in the DB.
+ * "Easter Egg", 1234 → "EasterEgg-1234"
+ * This matches the slug produced by parseGiftUrl for deduplication purposes.
+ */
+export function buildGiftPascalSlug(giftName: string, giftNumber: number): string {
+  return `${giftNameToPascalCase(giftName)}-${giftNumber}`;
+}
+
+/**
  * Build gift image URL for Fragment CDN.
  * Format: nft.fragment.com/gift/{name_lower}-{number}.webp
  */
