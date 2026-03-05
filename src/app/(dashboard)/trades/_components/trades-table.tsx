@@ -81,6 +81,7 @@ export function TradesTable({
       void utils.trades.list.invalidate();
       void utils.stats.dashboard.invalidate();
       void utils.analytics.invalidate();
+      toast.success("Saved");
     },
     onError: (err) => toast.error(err.message),
   });

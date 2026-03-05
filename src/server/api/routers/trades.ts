@@ -295,6 +295,12 @@ export const tradesRouter = router({
         updatedAt: new Date(),
       };
 
+      // Pre-fetch TON rate once if any date field changes — avoids duplicate network calls
+      const needsTonRate =
+        existing.tradeCurrency === "TON" &&
+        (input.buyDate !== undefined || input.sellDate !== undefined);
+      const tonRateForUpdate = needsTonRate ? await getTonUsdRate() : null;
+
       if (input.buyPrice !== undefined) {
         updateData.buyPrice = input.buyPrice;
       }
@@ -305,8 +311,7 @@ export const tradesRouter = router({
         if (existing.tradeCurrency === "STARS") {
           updateData.buyRateUsd = getStarsUsdRate().toString();
         } else {
-          const tonRate = await getTonUsdRate();
-          updateData.buyRateUsd = tonRate?.toString() ?? null;
+          updateData.buyRateUsd = tonRateForUpdate?.toString() ?? null;
         }
       }
       if (input.sellPrice !== undefined) {
@@ -319,8 +324,7 @@ export const tradesRouter = router({
         if (existing.tradeCurrency === "STARS") {
           updateData.sellRateUsd = getStarsUsdRate().toString();
         } else {
-          const tonRate = await getTonUsdRate();
-          updateData.sellRateUsd = tonRate?.toString() ?? null;
+          updateData.sellRateUsd = tonRateForUpdate?.toString() ?? null;
         }
       }
       if (input.sellMarketplace !== undefined) {
