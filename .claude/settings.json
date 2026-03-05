@@ -76,7 +76,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'Remember: update Serena session-state memory if you made progress!'",
+            "command": "echo 'BEFORE STOPPING: Did you (1) paste tsc/lint/test output? (2) run code-reviewer subagent? (3) include git diff --stat? If not, you are NOT done.'",
             "timeout": 5
           }
         ]

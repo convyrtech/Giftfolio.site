@@ -3,7 +3,7 @@
 ## Project Structure
 ```
 src/
-  app/                    # Next.js 15 App Router pages
+  app/                    # Next.js 16 App Router pages
     (auth)/               # Auth group (login)
     (dashboard)/          # Protected group (trades, settings)
       trades/
@@ -65,6 +65,6 @@ src/
 - PostgreSQL via Neon (serverless, @neondatabase/serverless driver)
 - Drizzle ORM — SQL-first, typed aggregations, neon-http driver
 - Migrations: `drizzle-kit generate` + `drizzle-kit migrate`
-- NEVER store computed values (profit) — always via VIEW `trade_profits`
+- Store raw data, compute derived values via VIEW `trade_profits`
 - Timezone: `user_settings.timezone` (IANA), all date queries use `AT TIME ZONE`
 - Deployment: Neon = DB, Railway = app only

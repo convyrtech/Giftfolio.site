@@ -5,10 +5,11 @@
 - Utilities/hooks: camelCase (`useDebounce.ts`, `parseGiftUrl.ts`)
 - Database tables/columns: snake_case (`buy_price`, `sell_date`)
 - Constants: UPPER_SNAKE_CASE (`MAX_IMPORT_ROWS`)
-- Types/interfaces: PascalCase with `I` prefix NEVER used
+- Types/interfaces: PascalCase, no `I` prefix
 
 ## TypeScript
-- NEVER use `any` — use `unknown` + type narrowing
+- NEVER use `any` — use `unknown` + type narrowing. Pre-commit hook BLOCKS `as any`
+- NEVER use `@ts-ignore` or `@ts-expect-error` — fix the type instead
 - Prefer `interface` for object shapes, `type` for unions/intersections
 - All functions must have explicit return types in server code
 - Use Zod for runtime validation at system boundaries
@@ -50,7 +51,6 @@ After EVERY phase/feature, before commit:
 6. Verification chain: `npx tsc --noEmit && npm run lint && npm test && npm run build`
 
 ## Styling
-- Tailwind classes only — NEVER inline styles or CSS modules
-- Use `cn()` utility for conditional classes
-- Dark theme is default — always test both themes
-- Use shadcn/ui primitives, don't create custom base components
+- Tailwind classes only (use `cn()` for conditional classes)
+- Dark theme is default — test both themes
+- Use shadcn/ui primitives as base, extend with composition

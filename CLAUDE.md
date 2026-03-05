@@ -1,43 +1,26 @@
 # GIFTSSITE — Telegram Gift Trading Tracker
 
-Steamfolio.com clone for tracking Telegram gift trade PnL. Dark theme, table-centric.
+Steamfolio.com clone for tracking Telegram gift trade PnL. Dark theme, table-centric, inline editing.
 
-## IRON RULES (NON-NEGOTIABLE — EVERY SESSION)
-1. **NO LAZINESS** — never cut corners, never skip steps, never produce half-measures
-2. **FACTS ONLY** — no assumptions; every decision must be based on verified facts from code, docs, or research
-3. **RESEARCH OR ASK** — if info is insufficient: use Tavily/Context7 OR ask the user; never guess
-4. **FULL CAPACITY** — work at maximum capacity; if a heavy tool gives better results, use it
-5. **NO TOKEN ECONOMY** — never sacrifice quality to save tokens
-6. **SELF-REVIEW** — after every feature/phase: review ALL changed files with code-reviewer agent
-7. **VERIFY BEFORE DONE** — run full verification chain before any "done" claim
-8. **NO LAZY SOLUTIONS** — when something is hard or tedious, solve it correctly. Never use `any` instead of the right type, never use a brittle workaround instead of the proper API, never skip a plan item because it "seems not critical". A lazy solution is always worse than no solution.
+## Rules
+1. **NO `any`, NO `@ts-ignore`** — pre-commit hook blocks these. Use `unknown` + narrowing
+2. **NO guessing** — read code, check docs (Context7/Tavily), or ask the user
+3. **NO skipping plan items** — implement every item or document WHY it's deferred
+4. **NO "it works" without proof** — paste actual command output, not words
+5. **Code reviewer subagent** on changed files after every feature — fresh context catches your bias
+6. **`/clear` between tasks** — stale context = stale thinking
 
-## MANDATORY SELF-AUDIT QUESTIONS (ask after EVERY implementation)
-Before calling anything done, answer each question out loud:
-1. **Where did I take the quick/lazy path instead of the correct one?** (types, APIs, approaches)
-2. **What did I implement incompletely or quietly skip from the plan?** (missing items, deferred without note)
-3. **What did I verify only in theory but never actually tested end-to-end?** (ran dev server? clicked through UI?)
-4. **What reviewer warnings did I dismiss as "pre-existing" or "not critical" — and was that justified?**
-5. **Is there any dead code I wrote that never actually runs?** (middleware intercepts before? wrong route group?)
-6. **For every exported function/component: is it actually used somewhere, and does it work correctly?**
+## Verification (before every commit)
+```bash
+npx tsc --noEmit && npm run lint && npm run build
+```
+Paste last 5 lines of output. No paste = not verified.
+Pre-commit hook enforces tsc + lint + blocks `as any`.
 
-## MANDATORY WORKFLOW FOR EVERY TASK
+## Workflow
+**STAR** → **THINK** (read code) → **PLAN** (file/function changes) → **EXECUTE** (one sub-task at a time) → **AUDIT** (types? tests? matches plan?)
 
-### STAR (verbalize before EVERY task):
-- **S**ituation — current state of code/system
-- **T**ask — what exactly needs to be done and why
-- **A**ction — concrete steps to be taken
-- **R**esult — what success looks like (measurable)
-
-### 6-Step Protocol (strict order, never skip):
-1. **THINK** — read all relevant code, understand full scope and dependencies
-2. **PLAN** — specific file/function changes written out
-3. **CHECKLIST** — explicit numbered list of every sub-task
-4. **SELF-AUDIT plan** — review for gaps, risks, edge cases BEFORE writing code
-5. **EXECUTE** — strictly ONE sub-task at a time, no context switching
-6. **SELF-AUDIT result** — after each sub-task: types? edge cases? tests? matches plan?
-
-**ONE TASK AT A TIME — complete → audit → next. No parallel work.**
+One task at a time. Complete → audit → next.
 
 ## Tech Stack
 - **Next.js 16** (App Router) + **tRPC** + **TypeScript** strict
@@ -63,34 +46,26 @@ npx drizzle-kit studio   # DB browser
 npx tsc --noEmit && npm run lint && npm test && npm run build
 ```
 
-## MCP Workflow Rules
-- **Context7** — ALWAYS use for library API docs (Next.js, Drizzle, shadcn, TanStack)
-- **Tavily** — web research, NOT generic WebSearch
-- **drizzle-mcp** — schema changes and migrations
-- **next-devtools** — debugging Next.js build/runtime errors
-- **tailwindcss** — Tailwind CSS docs and conversion
-- **tanstack** — TanStack Table/Query documentation
-- **better-auth** — auth setup and configuration docs
-- **playwright** — visual testing and gift page scraping (added to .mcp.json)
-- **neon** — database management, requires NEON_API_KEY env var
-- **planning-with-files** skill — ALWAYS use for multi-step tasks
+## MCP Servers
+**Core (always loaded):** Context7 (library docs), Tavily (web research), Serena (semantic code)
+**Project-specific:** Drizzle, next-devtools, playwright
+**On-demand (load when needed):** tailwindcss, tanstack, better-auth, neon
 
-## Skills Workflow
-- **brainstorming** — ALWAYS before any new feature/component
-- **test-driven-development** — ALWAYS when implementing features
-- **systematic-debugging** — ALWAYS when debugging
-- **verification-before-completion** — ALWAYS before claiming done
-- **frontend-design** — for UI/design work
-- **planning-with-files** — for complex multi-step tasks
-- **writing-plans** — for planning new phases
-- **code-review** — after PRs
+> Keep active MCP count low — each server eats ~2K tokens of tool definitions from context window.
+
+## Skills (invoke via Skill tool)
+- **brainstorming** → before new features; **writing-plans** → before multi-step work
+- **test-driven-development** → when implementing; **systematic-debugging** → when debugging
+- **verification-before-completion** → before claiming done; **code-review** → after features
+- **subagent-driven-development** → for parallel independent tasks in same session
+- **using-git-worktrees** → for feature isolation when working on multiple branches
 
 ## Key Rules
-- Stars = BIGINT (integers), TON = BIGINT nanotons (1e9) — branded types, never mix
+- Stars = BIGINT (integers), TON = BIGINT nanotons (1e9) — branded types, use type system to prevent mixing
 - Commission: DUAL model (flat Stars + permille ‰). TON trades use only permille
-- Profit NEVER stored — computed via VIEW `trade_profits`
+- Profit computed via VIEW `trade_profits` — store raw data, compute derived values
 - All PnL queries: `AT TIME ZONE user_settings.timezone`
-- Next.js 15/16: `cookies()`, `headers()`, `params` are async — always await
+- Next.js 16: `cookies()`, `headers()`, `params` are async — always await
 
 ## Key APIs
 - Gift images: `nft.fragment.com/gift/{name_lower}-{number}.webp`
@@ -99,25 +74,33 @@ npx tsc --noEmit && npm run lint && npm test && npm run build
 - Attributes: `api.changes.tg` (no auth)
 
 ## Key Patterns (learned from audit)
-- shadcn Select `onValueChange`: runtime narrowing with `includes()`, NEVER `as` cast
+- shadcn Select `onValueChange`: validate with `includes()` before narrowing
 - TanStack Table meta: module augmentation `declare module "@tanstack/react-table"` for type-safe meta
-- SQL toggles: `sql\`NOT ${column}\`` for atomic TOCTOU-safe toggle, NEVER SELECT→UPDATE
-- Dialogs: lift to parent (single instance), pass callbacks via table meta — NOT per-row
-- Neon transactions: only work with pool driver (neon-serverless), NOT neon-http
-- React Compiler: no ref read/write during render, no setState in useEffect for derived state
-- aria-required: always string `"true"` / `"false"`, never boolean
-- Self-review before every commit — catches 2-3 bugs on average
+- SQL toggles: atomic `sql\`NOT ${column}\`` in single UPDATE (TOCTOU-safe)
+- Dialogs: lift to parent (single instance), pass callbacks via table meta
+- Neon transactions: use pool driver (neon-serverless), not neon-http
+- React Compiler: keep ref access out of render, derive state without useEffect
+- Component remount: use `key` prop change to reset internal state (e.g. dialog pre-fill)
+- aria-required: always string `"true"` / `"false"`
 
 ## Architecture
 Full design: `docs/plans/2026-02-19-architecture-design.md`
 See `.claude/rules/` for code conventions, security rules, and patterns.
 
 ## Memory
-- Persistent memory: `C:/Users/paxalb/.claude/projects/E--/memory/MEMORY.md`
-- Deep project details: `C:/Users/paxalb/.claude/projects/E--/memory/giftfolio-project.md`
-- ALWAYS read memory at session start via planning-with-files session-catchup
+- Serena project memories: `read_memory` tool (project-overview, session-state, stack-patterns, etc.)
+- Auto-memory: `C:/Users/paxalb/.claude/projects/E--giftsite/memory/MEMORY.md`
+- Read relevant memories at session start for context recovery
 
 ## Implementation Status
-- Phases 1-13: ALL COMPLETE (core, auth, DB, UI, analytics, CSV import, mobile, theme)
-- Phase 14: Export formats (Excel + PDF) — optional, NOT started
-- Zero-trust security audit (103 issues) — ALL FIXED in Phases 7A-7D
+- Phases 1-13: COMPLETE (core, auth, DB, UI, analytics, CSV import, wallet import, mobile, theme)
+- Security audit (103 issues): ALL FIXED
+- **Next:** Remaining features plan at `docs/plans/2026-03-05-remaining-features-plan.md`
+  - Phase A: Inline editing + bulk actions (PRIORITY)
+  - Phase B-G: Collections, analytics, Excel, i18n, stubs
+
+## Context Management
+- Use `/clear` between unrelated tasks to keep context fresh
+- Delegate verbose operations (test runs, large file analysis) to subagents
+- Limit parallel subagents to 3 for optimal results
+- Use git worktrees for parallel feature branches (skill: `using-git-worktrees`)
