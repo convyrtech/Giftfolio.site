@@ -81,4 +81,31 @@ export const settingsRouter = router({
 
       return { success: true };
     }),
+
+  updateWalletAddress: rateLimitedProcedure
+    .input(
+      z.object({
+        // null = clear the wallet address
+        tonWalletAddress: z
+          .string()
+          .trim()
+          .max(100)
+          .regex(/^[a-zA-Z0-9_\-:]+$/, "Invalid TON wallet address format")
+          .nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+
+      // Upsert: creates settings row if it doesn't exist yet (e.g. new user who hasn't opened settings)
+      await ctx.db
+        .insert(userSettings)
+        .values({ userId, tonWalletAddress: input.tonWalletAddress })
+        .onConflictDoUpdate({
+          target: userSettings.userId,
+          set: { tonWalletAddress: input.tonWalletAddress },
+        });
+
+      return { success: true };
+    }),
 });

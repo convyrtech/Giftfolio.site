@@ -7,6 +7,7 @@ import { parseGiftUrl, getGiftTelegramUrl } from "@/lib/gift-parser";
 import { getTonUsdRate, getStarsUsdRate } from "@/lib/exchange-rates";
 import { importRowSchema } from "@/lib/csv-import-schema";
 import { importRateLimit } from "@/lib/rate-limit";
+import { importTradesFromWallet, buildGiftSlug } from "@/lib/ton-import";
 
 const sortColumns = ["buy_date", "sell_date", "buy_price", "sell_price", "created_at"] as const;
 const marketplaceEnum = z.enum(["fragment", "getgems", "tonkeeper", "p2p", "other"]);
@@ -651,6 +652,164 @@ export const tradesRouter = router({
             inserted += values.length;
           }
         });
+      }
+
+      return { inserted, skipped: errors.length, errors };
+    }),
+
+  walletImportPreview: rateLimitedProcedure
+    .input(
+      z.object({
+        // Override wallet address, or omit to use saved address from user settings
+        walletAddress: z
+          .string()
+          .trim()
+          .max(100)
+          .regex(/^[a-zA-Z0-9_\-:]+$/, "Invalid TON wallet address format")
+          .optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+
+      // Rate limit: shared with CSV import (5/hour)
+      const rl = await importRateLimit.limit(userId);
+      if (!rl.success) {
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Import rate limit exceeded. Try again later.",
+        });
+      }
+
+      // Resolve wallet address: input > saved settings
+      let walletAddress = input.walletAddress;
+      if (!walletAddress) {
+        const [settings] = await ctx.db
+          .select()
+          .from(userSettings)
+          .where(eq(userSettings.userId, userId));
+        walletAddress = settings?.tonWalletAddress ?? undefined;
+      }
+
+      if (!walletAddress) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No TON wallet address configured. Set one in Settings or provide it directly.",
+        });
+      }
+
+      const result = await importTradesFromWallet(walletAddress);
+
+      if (result.error) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: result.error,
+        });
+      }
+
+      // Serialize bigint prices as strings for JSON transport
+      return {
+        trades: result.trades.map((t) => ({
+          giftName: t.giftName,
+          giftNumber: t.giftNumber,
+          side: t.side,
+          priceNanoton: t.priceNanoton.toString(),
+          timestamp: t.timestamp,
+          eventId: t.eventId,
+        })),
+        eventsFetched: result.eventsFetched,
+        rateLimited: result.rateLimited,
+      };
+    }),
+
+  walletImportConfirm: rateLimitedProcedure
+    .input(
+      z.object({
+        trades: z
+          .array(
+            z.object({
+              giftName: z.string().min(1).max(200),
+              giftNumber: z.number().int().positive(),
+              // giftSlug is NOT accepted from client — re-derived server-side for security
+              priceNanoton: z.string().regex(/^\d+$/, "Must be a non-negative integer string"),
+              timestamp: z.number().int().positive(),
+              // Stripped to alphanumeric + safe chars to prevent stored XSS in notes
+              eventId: z.string().min(1).max(200).regex(/^[a-zA-Z0-9\-_]+$/, "Invalid event ID"),
+            }),
+          )
+          .min(1)
+          .max(MAX_IMPORT_ROWS),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+
+      // Rate limit: shared with CSV import (5/hour)
+      const rl = await importRateLimit.limit(userId);
+      if (!rl.success) {
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Import rate limit exceeded. Try again later.",
+        });
+      }
+
+      // Fetch user settings for commission defaults
+      const [settings] = await ctx.db
+        .select()
+        .from(userSettings)
+        .where(eq(userSettings.userId, userId));
+
+      const defaultPerm = settings?.defaultCommissionPermille ?? 0;
+
+      // Lock TON rate once for all inserts
+      const tonRate = await getTonUsdRate();
+      const tonRateStr = tonRate?.toString() ?? null;
+
+      const values = input.trades.map((t) => {
+        // Re-derive giftSlug server-side — never trust client-supplied slug
+        const giftSlug = buildGiftSlug(t.giftName, t.giftNumber);
+        const giftLink = getGiftTelegramUrl(giftSlug);
+        const buyDate = new Date(t.timestamp * 1000);
+
+        return {
+          userId,
+          giftLink,
+          giftSlug,
+          giftName: t.giftName,
+          giftNumber: BigInt(t.giftNumber),
+          quantity: 1,
+          tradeCurrency: "TON" as const,
+          buyPrice: BigInt(t.priceNanoton),
+          sellPrice: null,
+          buyDate,
+          sellDate: null,
+          commissionFlatStars: 0n, // TON trades: no flat Stars commission
+          commissionPermille: defaultPerm,
+          buyRateUsd: tonRateStr,
+          sellRateUsd: null,
+          buyMarketplace: null, // can't reliably determine marketplace from event data
+          sellMarketplace: null,
+          excludeFromPnl: false,
+          notes: `Imported from wallet (event: ${t.eventId})`,
+        };
+      });
+
+      const errors: Array<{ row: number; message: string }> = [];
+      let inserted = 0;
+
+      // Insert row-by-row to skip duplicates gracefully
+      for (let i = 0; i < values.length; i++) {
+        try {
+          await ctx.db.insert(trades).values(values[i]!);
+          inserted++;
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : "";
+          if (msg.includes("uq_trades_user_gift_open")) {
+            errors.push({ row: i + 1, message: "Already have an open position for this gift" });
+          } else {
+            errors.push({ row: i + 1, message: "Could not insert trade" });
+          }
+        }
       }
 
       return { inserted, skipped: errors.length, errors };

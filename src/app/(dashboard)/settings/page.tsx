@@ -24,6 +24,7 @@ export default function SettingsPage(): React.ReactElement {
   const [commissionPermille, setCommissionPermille] = useState("");
   const [defaultCurrency, setDefaultCurrency] = useState<"STARS" | "TON">("TON");
   const [timezone, setTimezone] = useState("");
+  const [walletAddress, setWalletAddress] = useState("");
 
   useEffect(() => {
     if (settings) {
@@ -32,6 +33,7 @@ export default function SettingsPage(): React.ReactElement {
       const c = settings.defaultCurrency;
       if (c === "STARS" || c === "TON") setDefaultCurrency(c);
       setTimezone(settings.timezone);
+      setWalletAddress(settings.tonWalletAddress ?? "");
     }
   }, [settings]);
 
@@ -44,6 +46,22 @@ export default function SettingsPage(): React.ReactElement {
       toast.error(err.message);
     },
   });
+
+  const updateWalletAddress = trpc.settings.updateWalletAddress.useMutation({
+    onSuccess: () => {
+      void utils.settings.get.invalidate();
+      toast.success("Wallet address saved");
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+
+  const handleSaveWallet = (): void => {
+    updateWalletAddress.mutate({
+      tonWalletAddress: walletAddress.trim() || null,
+    });
+  };
 
   const handleSave = (): void => {
     try {
@@ -156,6 +174,51 @@ export default function SettingsPage(): React.ReactElement {
         </CardContent>
       </Card>
 
+      {/* TON Wallet */}
+      <Card>
+        <CardHeader>
+          <CardTitle>TON Wallet</CardTitle>
+          <CardDescription>
+            Link your TON wallet to auto-import gift trades from your on-chain history.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="walletAddress">Wallet Address</Label>
+            <div className="flex gap-2">
+              <Input
+                id="walletAddress"
+                value={walletAddress}
+                onChange={(e) => setWalletAddress(e.target.value)}
+                placeholder="UQA... or EQ..."
+                className="flex-1 font-mono text-sm"
+              />
+              {walletAddress && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 self-center"
+                  onClick={() => setWalletAddress("")}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Supports TON friendly address format (UQ…, EQ…, 0:…)
+            </p>
+          </div>
+          <Button
+            onClick={handleSaveWallet}
+            disabled={updateWalletAddress.isPending}
+            variant="secondary"
+          >
+            {updateWalletAddress.isPending ? "Saving..." : "Save wallet address"}
+          </Button>
+        </CardContent>
+      </Card>
+
       <Button
         onClick={handleSave}
         disabled={updateSettings.isPending}
@@ -189,6 +252,15 @@ function SettingsSkeleton(): React.ReactElement {
         </CardHeader>
         <CardContent className="space-y-4">
           <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-28" />
+          <Skeleton className="h-4 w-72" />
+        </CardHeader>
+        <CardContent className="space-y-4">
           <Skeleton className="h-10 w-full" />
         </CardContent>
       </Card>

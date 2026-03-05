@@ -9,12 +9,6 @@ function createRedis(): Redis | null {
       token: env.UPSTASH_REDIS_REST_TOKEN,
     });
   }
-  // In production, rate limiting must be configured — fail hard at startup
-  if (env.NODE_ENV === "production") {
-    throw new Error(
-      "Rate limiting requires UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in production",
-    );
-  }
   return null;
 }
 
@@ -51,9 +45,16 @@ const importLimiter = redis
   : null;
 
 
-/** Rate limit check — returns { success: true } if no Redis (dev mode passthrough) */
+/** Rate limit check — passthrough in dev; throws at runtime in production if Redis is unconfigured */
 async function check(limiter: Ratelimit | null, key: string): Promise<{ success: boolean }> {
-  if (!limiter) return { success: true };
+  if (!limiter) {
+    if (env.NODE_ENV === "production") {
+      throw new Error(
+        "Rate limiting requires UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in production",
+      );
+    }
+    return { success: true };
+  }
   return limiter.limit(key);
 }
 

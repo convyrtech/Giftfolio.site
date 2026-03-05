@@ -7,7 +7,7 @@ import { getSessionCookie } from "better-auth/cookies";
  * Only verifies cookie existence — fast, no DB hit.
  * Actual authorization is enforced per-route via tRPC protectedProcedure.
  */
-export async function middleware(request: NextRequest): Promise<NextResponse> {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   const sessionCookie = getSessionCookie(request);
   const { pathname } = request.nextUrl;
 

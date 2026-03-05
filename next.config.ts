@@ -22,6 +22,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: __dirname,
+  },
   output: "standalone",
   serverExternalPackages: ["ws"],
   outputFileTracingIncludes: {

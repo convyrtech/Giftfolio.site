@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Upload, Plus, Eye, EyeOff } from "lucide-react";
+import { Download, Upload, Plus, Eye, EyeOff, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -20,6 +20,7 @@ import { nanoTonToTonString, type NanoTon } from "@/lib/currencies";
 import type { Trade } from "@/server/db/schema";
 import { TradeFormDialog } from "./trade-form-dialog";
 import { ImportCsvDialog } from "./import-csv-dialog";
+import { ImportWalletDialog } from "./import-wallet-dialog";
 
 const currencyFilters = ["all", "STARS", "TON"] as const;
 type CurrencyFilter = (typeof currencyFilters)[number];
@@ -53,6 +54,9 @@ export function TradesToolbar({
 }: TradesToolbarProps): React.ReactElement {
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showWalletImport, setShowWalletImport] = useState(false);
+
+  const { data: settings } = trpc.settings.get.useQuery();
 
   return (
     <>
@@ -66,6 +70,16 @@ export function TradesToolbar({
           <Upload className="mr-1 h-4 w-4" />
           Import
         </Button>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="outline" size="sm" onClick={() => setShowWalletImport(true)}>
+              <Wallet className="mr-1 h-4 w-4" />
+              Wallet
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Import trades from TON wallet</TooltipContent>
+        </Tooltip>
 
         <div className="h-5 w-px bg-border" />
 
@@ -131,6 +145,11 @@ export function TradesToolbar({
 
       <TradeFormDialog open={showForm} onOpenChange={setShowForm} />
       <ImportCsvDialog open={showImport} onOpenChange={setShowImport} />
+      <ImportWalletDialog
+        open={showWalletImport}
+        onOpenChange={setShowWalletImport}
+        savedWalletAddress={settings?.tonWalletAddress}
+      />
     </>
   );
 }
