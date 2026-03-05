@@ -32,7 +32,6 @@ type Step = "scan" | "preview" | "result";
 interface PreviewTrade {
   giftName: string;
   giftNumber: number;
-  side: "buy" | "sell";
   priceNanoton: string;
   timestamp: number;
   eventId: string;
@@ -53,6 +52,8 @@ interface ImportResult {
   skipped: number;
   errors: Array<{ row: number; message: string }>;
   closed: number;
+  sellSkipped: number;
+  sellErrors: Array<{ eventId: string; message: string }>;
 }
 
 export function ImportWalletDialog({
@@ -77,10 +78,8 @@ export function ImportWalletDialog({
       setAllTrades(data.trades);
       setEventsFetched(data.eventsFetched);
       setWasRateLimited(data.rateLimited);
-      // Pre-select all buy trades
-      const buyIds = data.trades
-        .filter((t) => t.side === "buy")
-        .map((t) => t.eventId);
+      // Pre-select all trades (server returns only buy-side)
+      const buyIds = data.trades.map((t) => t.eventId);
       setSelectedIds(new Set(buyIds));
       // Handle sell matches
       setSellMatches(data.sellMatches);
@@ -137,7 +136,8 @@ export function ImportWalletDialog({
     previewMutation.mutate({ walletAddress: address });
   };
 
-  const buyTrades = allTrades.filter((t) => t.side === "buy");
+  // Server returns only buy-side trades in walletImportPreview
+  const buyTrades = allTrades;
 
   const matchedSells = sellMatches.filter((s) => s.matchedTradeId !== null);
   const unmatchedSells = sellMatches.filter((s) => s.matchedTradeId === null);
@@ -186,29 +186,38 @@ export function ImportWalletDialog({
       skipped: 0,
       errors: [] as Array<{ row: number; message: string }>,
     };
-    let sellResult = { closed: 0, skipped: 0 };
+    let sellResult = {
+      closed: 0,
+      skipped: 0,
+      errors: [] as Array<{ eventId: string; message: string }>,
+    };
 
-    if (selectedBuys.length > 0) {
-      buyResult = await confirmMutation.mutateAsync({
-        trades: selectedBuys.map((t) => ({
-          giftName: t.giftName,
-          giftNumber: t.giftNumber,
-          priceNanoton: t.priceNanoton,
-          timestamp: t.timestamp,
-          eventId: t.eventId,
-        })),
-      });
-    }
+    try {
+      if (selectedBuys.length > 0) {
+        buyResult = await confirmMutation.mutateAsync({
+          trades: selectedBuys.map((t) => ({
+            giftName: t.giftName,
+            giftNumber: t.giftNumber,
+            priceNanoton: t.priceNanoton,
+            timestamp: t.timestamp,
+            eventId: t.eventId,
+          })),
+        });
+      }
 
-    if (selectedSells.length > 0) {
-      sellResult = await sellConfirmMutation.mutateAsync({
-        sells: selectedSells.map((s) => ({
-          tradeId: s.matchedTradeId!,
-          priceNanoton: s.priceNanoton,
-          timestamp: s.timestamp,
-          eventId: s.eventId,
-        })),
-      });
+      if (selectedSells.length > 0) {
+        sellResult = await sellConfirmMutation.mutateAsync({
+          sells: selectedSells.map((s) => ({
+            tradeId: s.matchedTradeId!,
+            priceNanoton: s.priceNanoton,
+            timestamp: s.timestamp,
+            eventId: s.eventId,
+          })),
+        });
+      }
+    } catch {
+      // onError toast already fires via mutation options — stay on preview so user can retry
+      return;
     }
 
     setResult({
@@ -216,6 +225,8 @@ export function ImportWalletDialog({
       skipped: buyResult.skipped,
       errors: buyResult.errors,
       closed: sellResult.closed,
+      sellSkipped: sellResult.skipped,
+      sellErrors: sellResult.errors,
     });
     setStep("result");
     void utils.trades.list.invalidate();
@@ -282,8 +293,9 @@ export function ImportWalletDialog({
               <DialogTitle>Review Detected Trades</DialogTitle>
               <DialogDescription>
                 Found {buyTrades.length} gift purchase
-                {buyTrades.length !== 1 ? "s" : ""} and {sellMatches.length} sale
-                {sellMatches.length !== 1 ? "s" : ""} in {eventsFetched} wallet events.
+                {buyTrades.length !== 1 ? "s" : ""}
+                {sellMatches.length > 0 && ` and ${sellMatches.length} sale${sellMatches.length !== 1 ? "s" : ""}`}
+                {" "}in {eventsFetched} wallet events.
                 {wasRateLimited && " Scan stopped early due to rate limit."}
               </DialogDescription>
             </DialogHeader>
@@ -494,12 +506,24 @@ export function ImportWalletDialog({
 
               {result.errors.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">Skipped trades:</p>
+                  <p className="text-xs font-medium text-muted-foreground">Skipped imports:</p>
                   <ul className="max-h-32 overflow-y-auto space-y-1">
                     {result.errors.map((e, i) => (
                       <li key={`${e.row}-${i}`} className="flex gap-2 text-xs text-muted-foreground">
                         <span>#{e.row}</span>
                         <span>{e.message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {result.sellErrors.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">Failed to close:</p>
+                  <ul className="max-h-24 overflow-y-auto space-y-1">
+                    {result.sellErrors.map((e, i) => (
+                      <li key={`${e.eventId}-${i}`} className="flex gap-2 text-xs text-muted-foreground">
+                        <span className="truncate">{e.message}</span>
                       </li>
                     ))}
                   </ul>
