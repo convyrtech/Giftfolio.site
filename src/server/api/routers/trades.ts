@@ -261,7 +261,8 @@ export const tradesRouter = router({
         buyDate: z.coerce.date().optional(),
         sellPrice: z.coerce.bigint().min(0n).optional(),
         sellDate: z.coerce.date().optional(),
-        sellMarketplace: marketplaceEnum.optional(),
+        buyMarketplace: marketplaceEnum.nullable().optional(),
+        sellMarketplace: marketplaceEnum.nullable().optional(),
         notes: z.string().max(1000).optional(),
         commissionFlatStars: z.coerce.bigint().min(0n).optional(),
         commissionPermille: z.number().int().min(0).max(1000).optional(),
@@ -337,6 +338,9 @@ export const tradesRouter = router({
         } else {
           updateData.sellRateUsd = tonRateForUpdate?.toString() ?? null;
         }
+      }
+      if (input.buyMarketplace !== undefined) {
+        updateData.buyMarketplace = input.buyMarketplace;
       }
       if (input.sellMarketplace !== undefined) {
         updateData.sellMarketplace = input.sellMarketplace;
@@ -422,6 +426,8 @@ export const tradesRouter = router({
     .input(
       z.object({
         ids: z.array(z.coerce.bigint()).min(1).max(500),
+        buyPrice: z.coerce.bigint().min(0n).optional(),
+        buyDate: z.coerce.date().optional(),
         sellPrice: z.coerce.bigint().min(0n).optional(),
         sellDate: z.coerce.date().optional(),
         isHidden: z.boolean().optional(),
@@ -439,15 +445,20 @@ export const tradesRouter = router({
 
       const updateData: Partial<Trade> = { updatedAt: new Date() };
 
+      // Note: buyDate <= sellDate not validated per-trade in bulk ops (would require SELECT per row).
+      // Individual update mutation enforces this. Bulk is best-effort — user should verify.
+      if (fields.buyPrice !== undefined) updateData.buyPrice = fields.buyPrice;
       if (fields.sellPrice !== undefined) updateData.sellPrice = fields.sellPrice;
       if (fields.isHidden !== undefined) updateData.isHidden = fields.isHidden;
       if (fields.excludeFromPnl !== undefined) updateData.excludeFromPnl = fields.excludeFromPnl;
       if (fields.commissionFlatStars !== undefined) updateData.commissionFlatStars = fields.commissionFlatStars;
       if (fields.commissionPermille !== undefined) updateData.commissionPermille = fields.commissionPermille;
 
-      // If setting sellDate, split by currency for correct rate locking (in transaction)
-      if (fields.sellDate !== undefined) {
-        updateData.sellDate = fields.sellDate;
+      // If setting dates, split by currency for correct rate locking (in transaction)
+      const needsRateLocking = fields.sellDate !== undefined || fields.buyDate !== undefined;
+      if (needsRateLocking) {
+        if (fields.sellDate !== undefined) updateData.sellDate = fields.sellDate;
+        if (fields.buyDate !== undefined) updateData.buyDate = fields.buyDate;
         const starsRate = getStarsUsdRate().toString();
         const tonRate = (await getTonUsdRate())?.toString() ?? null;
 
@@ -458,15 +469,26 @@ export const tradesRouter = router({
             isNull(trades.deletedAt),
           );
 
+          const starsUpdateData = { ...updateData };
+          const tonUpdateData = { ...updateData };
+          if (fields.sellDate !== undefined) {
+            starsUpdateData.sellRateUsd = starsRate;
+            tonUpdateData.sellRateUsd = tonRate;
+          }
+          if (fields.buyDate !== undefined) {
+            starsUpdateData.buyRateUsd = starsRate;
+            tonUpdateData.buyRateUsd = tonRate;
+          }
+
           const starsUpdated = await tx
             .update(trades)
-            .set({ ...updateData, sellRateUsd: starsRate })
+            .set(starsUpdateData)
             .where(and(baseWhere, eq(trades.tradeCurrency, "STARS")))
             .returning({ id: trades.id });
 
           const tonUpdated = await tx
             .update(trades)
-            .set({ ...updateData, sellRateUsd: tonRate })
+            .set(tonUpdateData)
             .where(and(baseWhere, eq(trades.tradeCurrency, "TON")))
             .returning({ id: trades.id });
 

@@ -13,16 +13,24 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { Trade } from "@/server/db/schema";
+import type { Trade, Marketplace } from "@/server/db/schema";
 import { TradeRowActions } from "./trade-row-actions";
 import { InlineDateCell } from "./inline-date-cell";
 import { InlinePriceCell } from "./inline-price-cell";
+import { InlineCommissionCell } from "./inline-commission-cell";
+import { InlineNotesCell } from "./inline-notes-cell";
+import { InlineMarketplaceCell } from "./inline-marketplace-cell";
 
 export interface InlineUpdateFields {
   buyDate?: Date;
   buyPrice?: bigint;
   sellDate?: Date;
   sellPrice?: bigint;
+  commissionFlatStars?: bigint;
+  commissionPermille?: number;
+  notes?: string;
+  buyMarketplace?: Marketplace | null;
+  sellMarketplace?: Marketplace | null;
 }
 
 export interface TradesTableMeta {
@@ -262,6 +270,47 @@ export const columns: ColumnDef<Trade>[] = [
     size: 120,
   },
   {
+    id: "commission",
+    header: "Comm.",
+    cell: ({ row, table }) => (
+      <InlineCommissionCell
+        flatStars={row.original.commissionFlatStars}
+        permille={row.original.commissionPermille}
+        currency={row.original.tradeCurrency}
+        onSave={(fields) =>
+          table.options.meta!.onInlineUpdate(row.original.id, fields)
+        }
+      />
+    ),
+    size: 90,
+  },
+  {
+    id: "buyMarketplace",
+    header: "Buy MP",
+    cell: ({ row, table }) => (
+      <InlineMarketplaceCell
+        value={row.original.buyMarketplace}
+        onSave={(mp) =>
+          table.options.meta!.onInlineUpdate(row.original.id, { buyMarketplace: mp })
+        }
+      />
+    ),
+    size: 100,
+  },
+  {
+    id: "sellMarketplace",
+    header: "Sell MP",
+    cell: ({ row, table }) => (
+      <InlineMarketplaceCell
+        value={row.original.sellMarketplace}
+        onSave={(mp) =>
+          table.options.meta!.onInlineUpdate(row.original.id, { sellMarketplace: mp })
+        }
+      />
+    ),
+    size: 100,
+  },
+  {
     id: "profit",
     header: () => <span className="block text-right">Profit</span>,
     cell: ({ row }) => {
@@ -270,12 +319,14 @@ export const columns: ColumnDef<Trade>[] = [
 
       const isPositive = result.value > 0n;
       const isNegative = result.value < 0n;
+      const excluded = row.original.excludeFromPnl;
 
       return (
         <div className="flex justify-end tabular-nums text-sm">
           <span
             className={cn(
               "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm font-medium",
+              excluded && "opacity-50",
               isPositive && "bg-profit/10 text-profit",
               isNegative && "bg-loss/10 text-loss",
               !isPositive && !isNegative && "text-muted-foreground",
@@ -283,11 +334,13 @@ export const columns: ColumnDef<Trade>[] = [
           >
             {isPositive ? "+" : ""}
             {formatPrice(result.value, row.original.tradeCurrency)}
-            {result.percent !== null && (
+            {excluded ? (
+              <span className="text-xs opacity-70">(excl.)</span>
+            ) : result.percent !== null ? (
               <span className="text-xs opacity-70">
                 ({result.percent >= 0 ? "+" : ""}{result.percent.toFixed(1)}%)
               </span>
-            )}
+            ) : null}
           </span>
         </div>
       );
@@ -364,6 +417,19 @@ export const columns: ColumnDef<Trade>[] = [
       );
     },
     size: 150,
+  },
+  {
+    id: "notes",
+    header: "",
+    cell: ({ row, table }) => (
+      <InlineNotesCell
+        notes={row.original.notes}
+        onSave={(text) =>
+          table.options.meta!.onInlineUpdate(row.original.id, { notes: text })
+        }
+      />
+    ),
+    size: 40,
   },
   {
     id: "actions",
