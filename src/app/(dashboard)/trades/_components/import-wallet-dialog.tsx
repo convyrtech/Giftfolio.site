@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc/client";
-import { formatTon, toNanoTon } from "@/lib/currencies";
+import { formatTon, NanoTon } from "@/lib/currencies";
 import { toast } from "sonner";
 
 interface ImportWalletDialogProps {
@@ -370,7 +370,7 @@ export function ImportWalletDialog({
                                   TON
                                 </Badge>
                                 <span className="tabular-nums text-sm">
-                                  {formatTon(toNanoTon(trade.priceNanoton))}
+                                  {formatTon(BigInt(trade.priceNanoton) as NanoTon)}
                                 </span>
                               </div>
                             </label>
@@ -423,7 +423,7 @@ export function ImportWalletDialog({
                                     </div>
                                   </div>
                                   <span className="tabular-nums text-sm shrink-0 text-loss">
-                                    {formatTon(toNanoTon(sell.priceNanoton))}
+                                    {formatTon(BigInt(sell.priceNanoton) as NanoTon)}
                                   </span>
                                 </label>
                               </div>
@@ -447,20 +447,18 @@ export function ImportWalletDialog({
               <Button variant="outline" onClick={reset}>
                 Back
               </Button>
-              {(buyTrades.length > 0 || matchedSells.length > 0) && (
-                <Button
-                  onClick={() => { void handleConfirm(); }}
-                  disabled={
-                    confirmMutation.isPending ||
-                    sellConfirmMutation.isPending ||
-                    totalSelected === 0
-                  }
-                >
-                  {confirmMutation.isPending || sellConfirmMutation.isPending
-                    ? "Importing..."
-                    : `Import ${totalSelected} action${totalSelected !== 1 ? "s" : ""}`}
-                </Button>
-              )}
+              <Button
+                onClick={() => { void handleConfirm(); }}
+                disabled={
+                  confirmMutation.isPending ||
+                  sellConfirmMutation.isPending ||
+                  totalSelected === 0
+                }
+              >
+                {confirmMutation.isPending || sellConfirmMutation.isPending
+                  ? "Importing..."
+                  : `Import ${totalSelected} action${totalSelected !== 1 ? "s" : ""}`}
+              </Button>
             </DialogFooter>
           </>
         )}
