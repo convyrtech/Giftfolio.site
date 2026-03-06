@@ -115,6 +115,7 @@ export const userSettings = pgTable("user_settings", {
   timezone: text().default("UTC").notNull(),
   tonWalletAddress: text("ton_wallet_address"),
   starsToTonRate: numeric("stars_to_ton_rate", { precision: 18, scale: 9 }),
+  locale: text({ enum: ["en", "ru", "zh"] }).default("en").notNull(),
 });
 
 // ─── Trades ───

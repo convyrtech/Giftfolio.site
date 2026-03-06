@@ -1,0 +1,25 @@
+{
+  "nav": {
+    "trades": "Trades",
+    "analytics": "Analytics",
+    "settings": "Settings",
+    "market": "Market",
+    "login": "Login",
+    "logout": "Log out"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "back": "Back",
+    "done": "Done",
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "noData": "No data",
+    "confirm": "Confirm",
+    "clear": "Clear",
+    "detect": "Detect",
+    "import": "Import",
+    "export": "Export"
+  }
+}
