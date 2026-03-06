@@ -7,7 +7,8 @@
     "mainNav": "Main navigation",
     "mobileNav": "Mobile navigation",
     "toggleTheme": "Toggle theme",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "signInTelegram": "Sign in with Telegram"
   },
   "common": {
     "save": "Save",
@@ -127,7 +128,20 @@
     "emptyDesc": "Add your first trade to start tracking profit",
     "setupCommission": "Set up commission first",
     "permilleRange": "Permille must be between 0 and 1000",
-    "flatNonNegative": "Flat commission cannot be negative"
+    "flatNonNegative": "Flat commission cannot be negative",
+    "visibilityUpdated": "Visibility updated",
+    "pnlSettingUpdated": "PnL setting updated",
+    "inlineSaved": "Saved",
+    "tradesList": "Trades list",
+    "loadingTradesPage": "Loading trades page",
+    "attrModel": "Model",
+    "attrBackdrop": "Backdrop",
+    "attrSymbol": "Symbol",
+    "searchGift": "Search gift...",
+    "selectGiftCollection": "Select gift collection",
+    "loadingGifts": "Loading gifts...",
+    "failedLoadGifts": "Failed to load gifts",
+    "noGiftFound": "No gift found."
   },
   "bulk": {
     "selected": "{count} selected",
@@ -275,7 +289,8 @@
     "skippedDuplicates": "Skipped (duplicates)",
     "skippedImports": "Skipped imports:",
     "failedClose": "Failed to close:",
-    "selectAtLeastOne": "Select at least one trade to import"
+    "selectAtLeastOne": "Select at least one trade to import",
+    "rateLimitedNote": " Scan stopped early due to rate limit."
   },
   "market": {
     "title": "Market",

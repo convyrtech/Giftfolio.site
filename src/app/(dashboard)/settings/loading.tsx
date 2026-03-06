@@ -1,9 +1,11 @@
+import { getTranslations } from "next-intl/server";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-export default function SettingsLoading(): React.ReactElement {
+export default async function SettingsLoading(): Promise<React.ReactElement> {
+  const t = await getTranslations("settings");
   return (
-    <div className="mx-auto max-w-2xl space-y-6" role="status" aria-label="Loading settings">
+    <div className="mx-auto max-w-2xl space-y-6" role="status" aria-label={t("loadingSettings")}>
       <Skeleton className="h-8 w-32" />
       <Card>
         <CardHeader>

@@ -170,9 +170,9 @@ export function useTradeColumns(): ColumnDef<Trade>[] {
                         </Badge>
                       </TooltipTrigger>
                       <TooltipContent side="top" className="text-xs">
-                        {trade.attrModel && <div>Model: {trade.attrModel}{trade.attrModelRarity && ` (${trade.attrModelRarity})`}</div>}
-                        {trade.attrBackdrop && <div>Backdrop: {trade.attrBackdrop}{trade.attrBackdropRarity && ` (${trade.attrBackdropRarity})`}</div>}
-                        {trade.attrSymbol && <div>Symbol: {trade.attrSymbol}{trade.attrSymbolRarity && ` (${trade.attrSymbolRarity})`}</div>}
+                        {trade.attrModel && <div>{t("attrModel")}: {trade.attrModel}{trade.attrModelRarity && ` (${trade.attrModelRarity})`}</div>}
+                        {trade.attrBackdrop && <div>{t("attrBackdrop")}: {trade.attrBackdrop}{trade.attrBackdropRarity && ` (${trade.attrBackdropRarity})`}</div>}
+                        {trade.attrSymbol && <div>{t("attrSymbol")}: {trade.attrSymbol}{trade.attrSymbolRarity && ` (${trade.attrSymbolRarity})`}</div>}
                       </TooltipContent>
                     </Tooltip>
                   );

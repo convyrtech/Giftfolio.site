@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { headers } from "next/headers";
 import { Gift } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { auth } from "@/server/auth";
@@ -21,6 +22,8 @@ export default async function PublicLayout({
   children: React.ReactNode;
 }): Promise<React.ReactElement> {
   const session = await getSession();
+  const tNav = await getTranslations("nav");
+  const tCommon = await getTranslations("common");
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -32,10 +35,10 @@ export default async function PublicLayout({
               className="flex items-center gap-2 font-semibold"
             >
               <Gift className="h-5 w-5 text-primary" />
-              <span>Giftfolio</span>
+              <span>{tCommon("appName")}</span>
             </Link>
             {session && (
-              <nav className="hidden md:flex" aria-label="Main navigation">
+              <nav className="hidden md:flex" aria-label={tNav("mainNav")}>
                 <PublicNav />
               </nav>
             )}
@@ -49,7 +52,7 @@ export default async function PublicLayout({
                 {session.user.image && (
                   <Image
                     src={session.user.image}
-                    alt={session.user.name ?? "User avatar"}
+                    alt={session.user.name ?? tCommon("userAvatar")}
                     width={32}
                     height={32}
                     className="rounded-full"
@@ -59,7 +62,7 @@ export default async function PublicLayout({
               </>
             ) : (
               <Link href="/login" className={cn(buttonVariants({ size: "sm" }))}>
-                Sign in with Telegram
+                {tNav("signInTelegram")}
               </Link>
             )}
             <PublicHeaderActions isLoggedIn={!!session} />
@@ -74,7 +77,7 @@ export default async function PublicLayout({
       {session && (
         <nav
           className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)] md:hidden"
-          aria-label="Mobile navigation"
+          aria-label={tNav("mobileNav")}
         >
           <PublicNav mobile />
         </nav>

@@ -7,7 +7,8 @@
     "mainNav": "主导航",
     "mobileNav": "移动导航",
     "toggleTheme": "切换主题",
-    "signOut": "退出"
+    "signOut": "退出",
+    "signInTelegram": "通过 Telegram 登录"
   },
   "common": {
     "save": "保存",
@@ -127,7 +128,20 @@
     "emptyDesc": "添加第一笔交易以开始追踪利润",
     "setupCommission": "先设置佣金",
     "permilleRange": "千分比必须在 0 到 1000 之间",
-    "flatNonNegative": "固定佣金不能为负数"
+    "flatNonNegative": "固定佣金不能为负数",
+    "visibilityUpdated": "可见性已更新",
+    "pnlSettingUpdated": "PnL 设置已更新",
+    "inlineSaved": "已保存",
+    "tradesList": "交易列表",
+    "loadingTradesPage": "加载交易页面",
+    "attrModel": "模型",
+    "attrBackdrop": "背景",
+    "attrSymbol": "符号",
+    "searchGift": "搜索礼物...",
+    "selectGiftCollection": "选择礼物集合",
+    "loadingGifts": "加载礼物中...",
+    "failedLoadGifts": "加载礼物失败",
+    "noGiftFound": "未找到礼物。"
   },
   "bulk": {
     "selected": "已选 {count} 项",
@@ -275,7 +289,8 @@
     "skippedDuplicates": "跳过（重复）",
     "skippedImports": "跳过的导入：",
     "failedClose": "关闭失败：",
-    "selectAtLeastOne": "请至少选择一笔交易进行导入"
+    "selectAtLeastOne": "请至少选择一笔交易进行导入",
+    "rateLimitedNote": " 由于速率限制，扫描提前停止。"
   },
   "market": {
     "title": "市场",

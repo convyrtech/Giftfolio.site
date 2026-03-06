@@ -65,7 +65,7 @@ export function TradesTable({
     onSuccess: () => {
       void utils.trades.list.invalidate();
       void utils.stats.dashboard.invalidate();
-      toast.success(t("tradeUpdated"));
+      toast.success(t("visibilityUpdated"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -74,7 +74,7 @@ export function TradesTable({
     onSuccess: () => {
       void utils.trades.list.invalidate();
       void utils.stats.dashboard.invalidate();
-      toast.success(t("tradeUpdated"));
+      toast.success(t("pnlSettingUpdated"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -84,7 +84,7 @@ export function TradesTable({
       void utils.trades.list.invalidate();
       void utils.stats.dashboard.invalidate();
       void utils.analytics.invalidate();
-      toast.success(t("tradeUpdated"));
+      toast.success(t("inlineSaved"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -175,7 +175,7 @@ export function TradesTable({
   return (
     <div>
       <div className="rounded-md border">
-        <Table aria-label="Trades list">
+        <Table aria-label={t("tradesList")}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronsUpDown, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,7 @@ export function GiftNameCombobox({
   id,
 }: GiftNameComboboxProps): React.ReactElement {
   const [open, setOpen] = useState(false);
+  const t = useTranslations("trades");
   const { data: catalog = [], isLoading, isError } = trpc.gifts.catalog.useQuery(undefined, {
     staleTime: 60 * 60 * 1000,
   });
@@ -42,26 +44,26 @@ export function GiftNameCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          aria-label="Select gift collection"
+          aria-label={t("selectGiftCollection")}
           className="w-full justify-between font-normal"
         >
           <span className={cn("truncate", !selected && "text-muted-foreground")}>
-            {selected ? selected.displayName : "Search gift..."}
+            {selected ? selected.displayName : t("searchGift")}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Command>
-          <CommandInput placeholder="Search gift..." />
+          <CommandInput placeholder={t("searchGift")} />
           <CommandList>
             {isLoading && (
-              <div className="py-6 text-center text-sm text-muted-foreground">Loading gifts...</div>
+              <div className="py-6 text-center text-sm text-muted-foreground">{t("loadingGifts")}</div>
             )}
             {isError && (
-              <div className="py-6 text-center text-sm text-destructive">Failed to load gifts</div>
+              <div className="py-6 text-center text-sm text-destructive">{t("failedLoadGifts")}</div>
             )}
-            <CommandEmpty>No gift found.</CommandEmpty>
+            <CommandEmpty>{t("noGiftFound")}</CommandEmpty>
             <CommandGroup>
               {catalog.map((gift) => (
                 <CommandItem

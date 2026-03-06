@@ -371,7 +371,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
       {/* Quantity in edit mode */}
       {isEdit && (
         <div className="space-y-2">
-          <Label htmlFor="quantity">Quantity</Label>
+          <Label htmlFor="quantity">{t("quantity")}</Label>
           <Input
             id="quantity"
             type="text"

@@ -7,7 +7,8 @@
     "mainNav": "Основная навигация",
     "mobileNav": "Мобильная навигация",
     "toggleTheme": "Переключить тему",
-    "signOut": "Выйти"
+    "signOut": "Выйти",
+    "signInTelegram": "Войти через Telegram"
   },
   "common": {
     "save": "Сохранить",
@@ -127,7 +128,20 @@
     "emptyDesc": "Добавьте первую сделку, чтобы начать отслеживать прибыль",
     "setupCommission": "Сначала настроить комиссию",
     "permilleRange": "Промилле должно быть от 0 до 1000",
-    "flatNonNegative": "Фиксированная комиссия не может быть отрицательной"
+    "flatNonNegative": "Фиксированная комиссия не может быть отрицательной",
+    "visibilityUpdated": "Видимость обновлена",
+    "pnlSettingUpdated": "Настройка PnL обновлена",
+    "inlineSaved": "Сохранено",
+    "tradesList": "Список сделок",
+    "loadingTradesPage": "Загрузка страницы сделок",
+    "attrModel": "Модель",
+    "attrBackdrop": "Фон",
+    "attrSymbol": "Символ",
+    "searchGift": "Поиск подарка...",
+    "selectGiftCollection": "Выбрать коллекцию подарков",
+    "loadingGifts": "Загрузка подарков...",
+    "failedLoadGifts": "Ошибка загрузки подарков",
+    "noGiftFound": "Подарок не найден."
   },
   "bulk": {
     "selected": "{count} выбрано",
@@ -275,7 +289,8 @@
     "skippedDuplicates": "Пропущено (дубликаты)",
     "skippedImports": "Пропущенные импорты:",
     "failedClose": "Ошибки закрытия:",
-    "selectAtLeastOne": "Выберите хотя бы одну сделку для импорта"
+    "selectAtLeastOne": "Выберите хотя бы одну сделку для импорта",
+    "rateLimitedNote": " Сканирование остановлено из-за ограничения частоты запросов."
   },
   "market": {
     "title": "Маркет",

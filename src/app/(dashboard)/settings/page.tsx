@@ -311,8 +311,9 @@ export default function SettingsPage(): React.ReactElement {
 }
 
 function SettingsSkeleton(): React.ReactElement {
+  const t = useTranslations("settings");
   return (
-    <div className="mx-auto max-w-2xl space-y-6" role="status" aria-label="Loading settings">
+    <div className="mx-auto max-w-2xl space-y-6" role="status" aria-label={t("loadingSettings")}>
       <Skeleton className="h-8 w-32" />
       <Card>
         <CardHeader>

@@ -1,9 +1,11 @@
+import { getTranslations } from "next-intl/server";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-export default function TradesLoading(): React.ReactElement {
+export default async function TradesLoading(): Promise<React.ReactElement> {
+  const t = await getTranslations("trades");
   return (
-    <div className="space-y-4" role="status" aria-label="Loading trades page">
+    <div className="space-y-4" role="status" aria-label={t("loadingTradesPage")}>
       {/* Summary cards skeleton */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (

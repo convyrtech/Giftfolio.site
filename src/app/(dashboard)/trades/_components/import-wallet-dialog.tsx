@@ -69,6 +69,7 @@ export function ImportWalletDialog({
   const [sellMatches, setSellMatches] = useState<SellMatch[]>([]);
   const [selectedSellIds, setSelectedSellIds] = useState<Set<string>>(new Set());
   const [eventsFetched, setEventsFetched] = useState(0);
+  const [wasRateLimited, setWasRateLimited] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
 
   const tw = useTranslations("walletImport");
@@ -80,6 +81,7 @@ export function ImportWalletDialog({
     onSuccess: (data) => {
       setAllTrades(data.trades);
       setEventsFetched(data.eventsFetched);
+      setWasRateLimited(data.rateLimited);
       const buyIds = data.trades.map((t) => t.eventId);
       setSelectedIds(new Set(buyIds));
       setSellMatches(data.sellMatches);
@@ -113,6 +115,7 @@ export function ImportWalletDialog({
     setSellMatches([]);
     setSelectedSellIds(new Set());
     setEventsFetched(0);
+    setWasRateLimited(false);
     setResult(null);
     setWalletInput(savedWalletAddress ?? "");
   }, [savedWalletAddress]);
@@ -291,6 +294,7 @@ export function ImportWalletDialog({
                   sales: sellMatches.length,
                   events: eventsFetched,
                 })}
+                {wasRateLimited && tw("rateLimitedNote")}
               </DialogDescription>
             </DialogHeader>
 
