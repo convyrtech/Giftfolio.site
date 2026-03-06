@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { and, eq, isNull, isNotNull, sql } from "drizzle-orm";
+import { and, eq, isNull, isNotNull, sql, desc, asc } from "drizzle-orm";
 import { router, protectedProcedure } from "../trpc";
 import { trades, tradeProfits, userSettings } from "@/server/db/schema";
 
@@ -180,4 +180,81 @@ export const analyticsRouter = router({
         winRate: result.total > 0 ? Math.round((result.wins / result.total) * 100) : null,
       };
     }),
+
+  /**
+   * Best & worst trades — top 3 by profit per currency + worst trade.
+   */
+  bestTrades: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.user.id;
+
+    const baseWhere = and(
+      eq(tradeProfits.userId, userId),
+      isNull(tradeProfits.deletedAt),
+      isNotNull(tradeProfits.sellDate),
+      eq(tradeProfits.excludeFromPnl, false),
+    );
+
+    const selectFields = {
+      id: tradeProfits.id,
+      giftName: tradeProfits.giftName,
+      giftNumber: tradeProfits.giftNumber,
+      tradeCurrency: tradeProfits.tradeCurrency,
+      buyPrice: tradeProfits.buyPrice,
+      sellPrice: tradeProfits.sellPrice,
+      quantity: tradeProfits.quantity,
+      netProfitStars: tradeProfits.netProfitStars,
+      netProfitNanoton: tradeProfits.netProfitNanoton,
+    };
+
+    // Best Stars trades (top 3 by net_profit_stars DESC)
+    const bestStars = await ctx.db
+      .select(selectFields)
+      .from(tradeProfits)
+      .where(and(baseWhere, eq(tradeProfits.tradeCurrency, "STARS"), isNotNull(tradeProfits.netProfitStars)))
+      .orderBy(desc(tradeProfits.netProfitStars))
+      .limit(3);
+
+    // Best TON trades (top 3 by net_profit_nanoton DESC)
+    const bestTon = await ctx.db
+      .select(selectFields)
+      .from(tradeProfits)
+      .where(and(baseWhere, eq(tradeProfits.tradeCurrency, "TON"), isNotNull(tradeProfits.netProfitNanoton)))
+      .orderBy(desc(tradeProfits.netProfitNanoton))
+      .limit(3);
+
+    // Worst trade overall (most negative profit in either currency)
+    // Use a CASE to normalize: Stars profit as-is, TON profit normalized would be complex
+    // Simpler: get worst from each currency separately
+    const [worstStars] = await ctx.db
+      .select(selectFields)
+      .from(tradeProfits)
+      .where(and(baseWhere, eq(tradeProfits.tradeCurrency, "STARS"), isNotNull(tradeProfits.netProfitStars)))
+      .orderBy(asc(tradeProfits.netProfitStars))
+      .limit(1);
+
+    const [worstTon] = await ctx.db
+      .select(selectFields)
+      .from(tradeProfits)
+      .where(and(baseWhere, eq(tradeProfits.tradeCurrency, "TON"), isNotNull(tradeProfits.netProfitNanoton)))
+      .orderBy(asc(tradeProfits.netProfitNanoton))
+      .limit(1);
+
+    type TradeRow = (typeof bestStars)[number];
+    function addRoi(trade: TradeRow): TradeRow & { roiPercent: number | null } {
+      const buyPrice = trade.buyPrice ?? 0n;
+      const qty = trade.quantity ?? 1;
+      const buyTotal = buyPrice * BigInt(qty);
+      if (buyTotal === 0n) return { ...trade, roiPercent: null };
+      const profit = trade.tradeCurrency === "TON" ? trade.netProfitNanoton : trade.netProfitStars;
+      if (profit === null) return { ...trade, roiPercent: null };
+      return { ...trade, roiPercent: Number((profit * 10000n) / buyTotal) / 100 };
+    }
+
+    return {
+      bestStars: bestStars.map(addRoi),
+      bestTon: bestTon.map(addRoi),
+      worstStars: worstStars ? addRoi(worstStars) : null,
+      worstTon: worstTon ? addRoi(worstTon) : null,
+    };
+  }),
 });

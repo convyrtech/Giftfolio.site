@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Diamond, Star, TrendingUp, Briefcase } from "lucide-react";
 
-const periods = ["total", "day", "week", "month"] as const;
+const periods = ["total", "year", "month", "week", "day"] as const;
 type Period = (typeof periods)[number];
 
 export function SummaryCards(): React.ReactElement {
@@ -51,6 +51,7 @@ export function SummaryCards(): React.ReactElement {
         <Tabs value={period} onValueChange={(v) => { if ((periods as readonly string[]).includes(v)) setPeriod(v as Period); }}>
           <TabsList className="h-8">
             <TabsTrigger value="total" className="text-xs px-2">All</TabsTrigger>
+            <TabsTrigger value="year" className="text-xs px-2">Year</TabsTrigger>
             <TabsTrigger value="month" className="text-xs px-2">Month</TabsTrigger>
             <TabsTrigger value="week" className="text-xs px-2">Week</TabsTrigger>
             <TabsTrigger value="day" className="text-xs px-2">Day</TabsTrigger>

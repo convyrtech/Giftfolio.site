@@ -8,7 +8,7 @@ export const statsRouter = router({
   dashboard: protectedProcedure
     .input(
       z.object({
-        period: z.enum(["day", "week", "month", "total"]).default("total"),
+        period: z.enum(["day", "week", "month", "year", "total"]).default("total"),
         currency: z.enum(["STARS", "TON"]).optional(),
       }),
     )
@@ -35,13 +35,23 @@ export const statsRouter = router({
           .where(eq(userSettings.userId, userId));
         const tz = settings?.timezone ?? "UTC";
 
-        const days = input.period === "day" ? 1 : input.period === "week" ? 7 : 30;
-        pnlConditions.push(
-          gte(
-            trades.sellDate,
-            sql`(CURRENT_TIMESTAMP AT TIME ZONE ${tz} - make_interval(days => ${days}))::date`,
-          ),
-        );
+        if (input.period === "year") {
+          // Calendar year: from Jan 1 of current year in user timezone
+          pnlConditions.push(
+            gte(
+              trades.sellDate,
+              sql`date_trunc('year', CURRENT_TIMESTAMP AT TIME ZONE ${tz})::date`,
+            ),
+          );
+        } else {
+          const days = input.period === "day" ? 1 : input.period === "week" ? 7 : 30;
+          pnlConditions.push(
+            gte(
+              trades.sellDate,
+              sql`(CURRENT_TIMESTAMP AT TIME ZONE ${tz} - make_interval(days => ${days}))::date`,
+            ),
+          );
+        }
       }
 
       // PnL stats — only closed trades (with sellDate), multiplied by quantity
@@ -51,7 +61,7 @@ export const statsRouter = router({
           closedTrades: sql<number>`sum(${trades.quantity})::int`.mapWith(Number),
           totalBuy: sql<bigint>`coalesce(sum(${trades.buyPrice} * ${trades.quantity}), 0)`.mapWith(BigInt),
           totalSell: sql<bigint>`coalesce(sum(${trades.sellPrice} * ${trades.quantity}), 0)`.mapWith(BigInt),
-          totalCommissionFlat: sql<bigint>`coalesce(sum(CASE WHEN ${trades.tradeCurrency} = 'STARS' THEN ${trades.commissionFlatStars} * ${trades.quantity} ELSE 0 END), 0)`.mapWith(BigInt),
+          totalCommissionFlat: sql<bigint>`coalesce(sum(CASE WHEN ${trades.tradeCurrency} = 'STARS' THEN ${trades.commissionFlatStars} * COALESCE(${trades.transferredCount}, ${trades.quantity}) ELSE 0 END), 0)`.mapWith(BigInt),
           totalPermilleCommission: sql<bigint>`coalesce(sum(FLOOR(${trades.sellPrice} * ${trades.commissionPermille} / 1000.0 + 0.5) * ${trades.quantity}), 0)`.mapWith(BigInt),
         })
         .from(trades)
