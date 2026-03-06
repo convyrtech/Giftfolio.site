@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
 import { nanoTonToTonString, type NanoTon } from "@/lib/currencies";
+import * as XLSX from "xlsx";
 import type { Trade } from "@/server/db/schema";
 import { TradeFormDialog } from "./trade-form-dialog";
 import { ImportCsvDialog } from "./import-csv-dialog";
@@ -138,8 +139,9 @@ export function TradesToolbar({
           </TooltipContent>
         </Tooltip>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex gap-1">
           <ExportCsvButton currency={currency === "all" ? undefined : currency} />
+          <ExportExcelButton currency={currency === "all" ? undefined : currency} />
         </div>
       </div>
 
@@ -180,6 +182,55 @@ function ExportCsvButton({ currency }: { currency?: "STARS" | "TON" }): React.Re
     <Button variant="outline" size="sm" onClick={handleExport} disabled={isFetching}>
       <Download className="mr-1 h-4 w-4" />
       CSV
+    </Button>
+  );
+}
+
+function ExportExcelButton({ currency }: { currency?: "STARS" | "TON" }): React.ReactElement {
+  const { refetch, isFetching } = trpc.trades.exportCsv.useQuery(
+    { currency },
+    { enabled: false },
+  );
+
+  const handleExport = async (): Promise<void> => {
+    const result = await refetch();
+    const trades = result.data;
+    if (!trades || trades.length === 0) return;
+
+    const rows = trades.map((t) => ({
+      "Gift Name": t.giftName,
+      "Gift Number": t.giftNumber !== null ? Number(t.giftNumber) : "",
+      "Quantity": t.quantity,
+      "Buy Date": t.buyDate instanceof Date ? t.buyDate.toISOString().slice(0, 10) : String(t.buyDate),
+      "Sell Date": t.sellDate
+        ? t.sellDate instanceof Date
+          ? t.sellDate.toISOString().slice(0, 10)
+          : String(t.sellDate)
+        : "",
+      "Currency": t.tradeCurrency,
+      "Buy Price": t.tradeCurrency === "TON"
+        ? nanoTonToTonString(t.buyPrice as NanoTon)
+        : Number(t.buyPrice),
+      "Sell Price": t.sellPrice !== null
+        ? t.tradeCurrency === "TON"
+          ? nanoTonToTonString(t.sellPrice as NanoTon)
+          : Number(t.sellPrice)
+        : "",
+      "Buy Marketplace": t.buyMarketplace ?? "",
+      "Sell Marketplace": t.sellMarketplace ?? "",
+      "Notes": t.notes ?? "",
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Trades");
+    XLSX.writeFile(wb, `trades_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  return (
+    <Button variant="outline" size="sm" onClick={handleExport} disabled={isFetching}>
+      <Download className="mr-1 h-4 w-4" />
+      Excel
     </Button>
   );
 }

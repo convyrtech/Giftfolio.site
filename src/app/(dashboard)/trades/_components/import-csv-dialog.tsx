@@ -14,6 +14,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { trpc } from "@/lib/trpc/client";
 import { parseCsv } from "@/lib/csv-parser";
+import * as XLSX from "xlsx";
 import { parseCsvRows, MAX_FILE_SIZE, MAX_IMPORT_ROWS, type ParsedRow } from "@/lib/csv-import-schema";
 import { toast } from "sonner";
 
@@ -66,6 +67,18 @@ export function ImportCsvDialog({ open, onOpenChange }: ImportCsvDialogProps): R
     [onOpenChange, reset],
   );
 
+  const processRows = useCallback((rawRows: string[][]) => {
+    const parsed = parseCsvRows(rawRows);
+    if (parsed.headerError) {
+      setHeaderError(parsed.headerError);
+      setParsedRows([]);
+    } else {
+      setHeaderError(null);
+      setParsedRows(parsed.rows);
+    }
+    setStep("preview");
+  }, []);
+
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -77,29 +90,42 @@ export function ImportCsvDialog({ open, onOpenChange }: ImportCsvDialogProps): R
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const text = evt.target?.result;
-        if (typeof text !== "string") return;
+      const isExcel = file.name.endsWith(".xlsx") || file.name.endsWith(".xls");
 
-        const rawRows = parseCsv(text);
-        const parsed = parseCsvRows(rawRows);
-
-        if (parsed.headerError) {
-          setHeaderError(parsed.headerError);
-          setParsedRows([]);
-        } else {
-          setHeaderError(null);
-          setParsedRows(parsed.rows);
-        }
-        setStep("preview");
-      };
-      reader.readAsText(file, "UTF-8");
+      if (isExcel) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const data = evt.target?.result;
+          if (!data) return;
+          const workbook = XLSX.read(data, { type: "array" });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]!];
+          if (!sheet) {
+            setHeaderError("Empty workbook — no sheets found");
+            setStep("preview");
+            return;
+          }
+          const rawRows: string[][] = XLSX.utils.sheet_to_json(sheet, {
+            header: 1,
+            raw: false,
+            defval: "",
+          });
+          processRows(rawRows);
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const text = evt.target?.result;
+          if (typeof text !== "string") return;
+          processRows(parseCsv(text));
+        };
+        reader.readAsText(file, "UTF-8");
+      }
 
       // Reset file input so same file can be re-selected
       e.target.value = "";
     },
-    [],
+    [processRows],
   );
 
   const handleImport = useCallback(() => {
@@ -133,9 +159,9 @@ export function ImportCsvDialog({ open, onOpenChange }: ImportCsvDialogProps): R
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Import Trades from CSV</DialogTitle>
+          <DialogTitle>Import Trades</DialogTitle>
           <DialogDescription>
-            Upload a CSV file matching the export format.
+            Upload a CSV or Excel (.xlsx) file matching the export format.
           </DialogDescription>
         </DialogHeader>
 
@@ -147,13 +173,13 @@ export function ImportCsvDialog({ open, onOpenChange }: ImportCsvDialogProps): R
             </p>
             <label className="cursor-pointer">
               <Button variant="outline" asChild>
-                <span>Choose CSV file</span>
+                <span>Choose file</span>
               </Button>
               <input
                 type="file"
-                accept=".csv,text/csv"
+                accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 className="hidden"
-                aria-label="Upload CSV file"
+                aria-label="Upload CSV or Excel file"
                 onChange={handleFileSelect}
               />
             </label>
