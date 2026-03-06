@@ -195,8 +195,14 @@ export default function SettingsPage(): React.ReactElement {
                 type="text"
                 inputMode="decimal"
                 value={starsToTonRate}
-                onChange={(e) => setStarsToTonRate(e.target.value.replace(/[^0-9.]/g, ""))}
-                placeholder="e.g. 770"
+                onChange={(e) => {
+                  let v = e.target.value.replace(/[^0-9.]/g, "");
+                  // Allow only one dot
+                  const dotIdx = v.indexOf(".");
+                  if (dotIdx !== -1) v = v.slice(0, dotIdx + 1) + v.slice(dotIdx + 1).replace(/\./g, "");
+                  setStarsToTonRate(v);
+                }}
+                placeholder="e.g. 770 (check Fragment market)"
                 className="flex-1"
               />
               {starsToTonRate && (

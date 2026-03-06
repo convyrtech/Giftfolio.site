@@ -222,27 +222,26 @@ export const analyticsRouter = router({
       .orderBy(desc(tradeProfits.netProfitNanoton))
       .limit(3);
 
-    // Worst trade overall (most negative profit in either currency)
-    // Use a CASE to normalize: Stars profit as-is, TON profit normalized would be complex
-    // Simpler: get worst from each currency separately
+    // Worst trades: only show actually losing trades (profit < 0)
     const [worstStars] = await ctx.db
       .select(selectFields)
       .from(tradeProfits)
-      .where(and(baseWhere, eq(tradeProfits.tradeCurrency, "STARS"), isNotNull(tradeProfits.netProfitStars)))
+      .where(and(baseWhere, eq(tradeProfits.tradeCurrency, "STARS"), isNotNull(tradeProfits.netProfitStars), sql`${tradeProfits.netProfitStars} < 0`))
       .orderBy(asc(tradeProfits.netProfitStars))
       .limit(1);
 
     const [worstTon] = await ctx.db
       .select(selectFields)
       .from(tradeProfits)
-      .where(and(baseWhere, eq(tradeProfits.tradeCurrency, "TON"), isNotNull(tradeProfits.netProfitNanoton)))
+      .where(and(baseWhere, eq(tradeProfits.tradeCurrency, "TON"), isNotNull(tradeProfits.netProfitNanoton), sql`${tradeProfits.netProfitNanoton} < 0`))
       .orderBy(asc(tradeProfits.netProfitNanoton))
       .limit(1);
 
     type TradeRow = (typeof bestStars)[number];
     function addRoi(trade: TradeRow): TradeRow & { roiPercent: number | null } {
       const buyPrice = trade.buyPrice ?? 0n;
-      const qty = trade.quantity ?? 1;
+      const qty = trade.quantity;
+      if (qty === null) return { ...trade, roiPercent: null };
       const buyTotal = buyPrice * BigInt(qty);
       if (buyTotal === 0n) return { ...trade, roiPercent: null };
       const profit = trade.tradeCurrency === "TON" ? trade.netProfitNanoton : trade.netProfitStars;

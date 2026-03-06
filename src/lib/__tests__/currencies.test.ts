@@ -186,6 +186,12 @@ describe("starsToNanoton", () => {
     expect(starsToNanoton(100n as Stars, "0")).toBe(0n);
   });
 
+  it("handles negative Stars (loss scenario)", () => {
+    // -770 Stars at rate 770 = -1 TON
+    const result = starsToNanoton(-770n as Stars, "770");
+    expect(result).toBe(-1_000_000_000n);
+  });
+
   it("handles small amounts", () => {
     // 1 Star at rate 770 = 1/770 TON ≈ 0.001298701 TON
     const result = starsToNanoton(1n as Stars, "770");

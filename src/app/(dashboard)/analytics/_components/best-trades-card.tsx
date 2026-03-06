@@ -6,7 +6,7 @@ import { formatStars, formatTon, type Stars, type NanoTon } from "@/lib/currenci
 import { cn } from "@/lib/utils";
 import { Trophy, TrendingDown } from "lucide-react";
 
-function formatProfit(value: bigint, currency: string): string {
+function formatProfit(value: bigint, currency: "STARS" | "TON"): string {
   if (currency === "TON") return formatTon(value as NanoTon);
   return formatStars(value as Stars);
 }
@@ -15,7 +15,7 @@ interface TradeRowProps {
   giftName: string | null;
   giftNumber: bigint | null;
   profit: bigint;
-  currency: string;
+  currency: "STARS" | "TON";
   roiPercent: number | null;
 }
 

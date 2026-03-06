@@ -14,11 +14,10 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { trpc } from "@/lib/trpc/client";
 import { parseCsv } from "@/lib/csv-parser";
-import * as XLSX from "xlsx";
 import { parseCsvRows, MAX_FILE_SIZE, MAX_IMPORT_ROWS, type ParsedRow } from "@/lib/csv-import-schema";
 import { toast } from "sonner";
 
-interface ImportCsvDialogProps {
+interface ImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -31,7 +30,7 @@ interface ImportResult {
   errors: Array<{ row: number; message: string }>;
 }
 
-export function ImportCsvDialog({ open, onOpenChange }: ImportCsvDialogProps): React.ReactElement {
+export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.ReactElement {
   const [step, setStep] = useState<Step>("upload");
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [headerError, setHeaderError] = useState<string | null>(null);
@@ -94,22 +93,35 @@ export function ImportCsvDialog({ open, onOpenChange }: ImportCsvDialogProps): R
 
       if (isExcel) {
         const reader = new FileReader();
-        reader.onload = (evt) => {
-          const data = evt.target?.result;
-          if (!data) return;
-          const workbook = XLSX.read(data, { type: "array" });
-          const sheet = workbook.Sheets[workbook.SheetNames[0]!];
-          if (!sheet) {
-            setHeaderError("Empty workbook — no sheets found");
+        reader.onload = async (evt) => {
+          try {
+            const data = evt.target?.result;
+            if (!data) return;
+            const XLSX = await import("xlsx");
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheetName = workbook.SheetNames[0];
+            if (!firstSheetName) {
+              setHeaderError("Empty workbook — no sheets found");
+              setStep("preview");
+              return;
+            }
+            const sheet = workbook.Sheets[firstSheetName];
+            if (!sheet) {
+              setHeaderError("Empty workbook — no sheets found");
+              setStep("preview");
+              return;
+            }
+            // raw: false + defval: "" ensures all cells are strings
+            const rawRows = XLSX.utils.sheet_to_json<string[]>(sheet, {
+              header: 1,
+              raw: false,
+              defval: "",
+            });
+            processRows(rawRows);
+          } catch {
+            setHeaderError("Failed to parse Excel file");
             setStep("preview");
-            return;
           }
-          const rawRows: string[][] = XLSX.utils.sheet_to_json(sheet, {
-            header: 1,
-            raw: false,
-            defval: "",
-          });
-          processRows(rawRows);
         };
         reader.readAsArrayBuffer(file);
       } else {

@@ -17,10 +17,9 @@ import {
 } from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
 import { nanoTonToTonString, type NanoTon } from "@/lib/currencies";
-import * as XLSX from "xlsx";
 import type { Trade } from "@/server/db/schema";
 import { TradeFormDialog } from "./trade-form-dialog";
-import { ImportCsvDialog } from "./import-csv-dialog";
+import { ImportDialog } from "./import-dialog";
 import { ImportWalletDialog } from "./import-wallet-dialog";
 
 const currencyFilters = ["all", "STARS", "TON"] as const;
@@ -146,7 +145,7 @@ export function TradesToolbar({
       </div>
 
       <TradeFormDialog open={showForm} onOpenChange={setShowForm} />
-      <ImportCsvDialog open={showImport} onOpenChange={setShowImport} />
+      <ImportDialog open={showImport} onOpenChange={setShowImport} />
       <ImportWalletDialog
         key={String(showWalletImport)}
         open={showWalletImport}
@@ -208,19 +207,23 @@ function ExportExcelButton({ currency }: { currency?: "STARS" | "TON" }): React.
           : String(t.sellDate)
         : "",
       "Currency": t.tradeCurrency,
+      // TON as float64 for Excel usability — precision loss above ~9e15 nanotons (unlikely)
       "Buy Price": t.tradeCurrency === "TON"
-        ? nanoTonToTonString(t.buyPrice as NanoTon)
+        ? parseFloat(nanoTonToTonString(t.buyPrice as NanoTon))
         : Number(t.buyPrice),
       "Sell Price": t.sellPrice !== null
         ? t.tradeCurrency === "TON"
-          ? nanoTonToTonString(t.sellPrice as NanoTon)
+          ? parseFloat(nanoTonToTonString(t.sellPrice as NanoTon))
           : Number(t.sellPrice)
         : "",
+      "Commission Flat (Stars)": t.commissionFlatStars !== null ? Number(t.commissionFlatStars) : "",
+      "Commission Permille": t.commissionPermille ?? "",
       "Buy Marketplace": t.buyMarketplace ?? "",
       "Sell Marketplace": t.sellMarketplace ?? "",
       "Notes": t.notes ?? "",
     }));
 
+    const XLSX = await import("xlsx");
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Trades");

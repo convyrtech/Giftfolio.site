@@ -51,7 +51,7 @@ export const settingsRouter = router({
         defaultCommissionPermille: z.number().int().min(0).max(1000).optional(),
         defaultCurrency: z.enum(["STARS", "TON"]).optional(),
         timezone: ianaTimezone.optional(),
-        starsToTonRate: z.string().regex(/^\d+(\.\d{1,9})?$/, "Must be a positive decimal number").nullable().optional(),
+        starsToTonRate: z.string().regex(/^\d+(\.\d{1,9})?$/, "Must be a positive decimal number").refine((v) => parseFloat(v) > 0, "Rate must be greater than 0").nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
