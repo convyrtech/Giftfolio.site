@@ -163,7 +163,9 @@ export default function SettingsPage(): React.ReactElement {
         } : null,
         trades: serializedTrades,
       };
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const replacer = (_key: string, value: unknown): unknown =>
+        typeof value === "bigint" ? String(value) : value;
+      const blob = new Blob([JSON.stringify(data, replacer, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

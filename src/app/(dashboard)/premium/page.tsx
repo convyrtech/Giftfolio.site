@@ -64,7 +64,7 @@ export default function PremiumPage(): React.ReactElement {
                 className="w-full"
                 disabled
               >
-                {tier.current ? t("currentPlan") : t("comingSoon")}
+                {tier.current ? t("currentPlan") : t("comingSoonShort")}
               </Button>
             </CardContent>
           </Card>
