@@ -7,6 +7,8 @@ import {
   parseStarsInput,
   formatStars,
   nanoTonToTonString,
+  starsToNanoton,
+  nanotonToStars,
   type Stars,
   type NanoTon,
 } from "../currencies";
@@ -163,5 +165,58 @@ describe("superjson round-trip", () => {
     const serialized = superjson.serialize(large);
     const deserialized = superjson.deserialize<bigint>(serialized);
     expect(deserialized).toBe(large);
+  });
+});
+
+describe("starsToNanoton", () => {
+  it("converts Stars to NanoTon at integer rate", () => {
+    // 770 Stars = 1 TON. So 770 Stars → 1_000_000_000 nanoton
+    const result = starsToNanoton(770n as Stars, "770");
+    expect(result).toBe(1_000_000_000n);
+  });
+
+  it("converts Stars to NanoTon at fractional rate", () => {
+    // 770.5 Stars = 1 TON. So 770.5 Stars → 1e9 nanoton
+    const result = starsToNanoton(BigInt(7705) as Stars, "770.5");
+    // 7705 / 770.5 = 10.0 TON = 10_000_000_000 nanoton
+    expect(result).toBe(10_000_000_000n);
+  });
+
+  it("returns 0 for zero rate", () => {
+    expect(starsToNanoton(100n as Stars, "0")).toBe(0n);
+  });
+
+  it("handles small amounts", () => {
+    // 1 Star at rate 770 = 1/770 TON ≈ 0.001298701 TON
+    const result = starsToNanoton(1n as Stars, "770");
+    // 1e9 / 770 = 1298701 (truncated)
+    expect(result).toBe(1298701n);
+  });
+});
+
+describe("nanotonToStars", () => {
+  it("converts NanoTon to Stars at integer rate", () => {
+    // 1 TON at rate 770 = 770 Stars
+    const result = nanotonToStars(1_000_000_000n as NanoTon, "770");
+    expect(result).toBe(770n);
+  });
+
+  it("converts large NanoTon amounts", () => {
+    // 10 TON at rate 770 = 7700 Stars
+    const result = nanotonToStars(10_000_000_000n as NanoTon, "770");
+    expect(result).toBe(7700n);
+  });
+
+  it("handles negative amounts (loss)", () => {
+    // -1 TON at rate 770 = -770 Stars
+    const result = nanotonToStars(-1_000_000_000n as NanoTon, "770");
+    expect(result).toBe(-770n);
+  });
+
+  it("roundtrip: Stars → NanoTon → Stars preserves value", () => {
+    const original = 7700n as Stars;
+    const nanoton = starsToNanoton(original, "770");
+    const back = nanotonToStars(nanoton, "770");
+    expect(back).toBe(original);
   });
 });

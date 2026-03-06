@@ -51,6 +51,7 @@ export const settingsRouter = router({
         defaultCommissionPermille: z.number().int().min(0).max(1000).optional(),
         defaultCurrency: z.enum(["STARS", "TON"]).optional(),
         timezone: ianaTimezone.optional(),
+        starsToTonRate: z.string().regex(/^\d+(\.\d{1,9})?$/, "Must be a positive decimal number").nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -68,6 +69,9 @@ export const settingsRouter = router({
       }
       if (input.timezone !== undefined) {
         updateData.timezone = input.timezone;
+      }
+      if (input.starsToTonRate !== undefined) {
+        updateData.starsToTonRate = input.starsToTonRate;
       }
 
       if (Object.keys(updateData).length === 0) {

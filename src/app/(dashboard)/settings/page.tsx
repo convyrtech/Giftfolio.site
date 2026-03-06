@@ -25,6 +25,7 @@ export default function SettingsPage(): React.ReactElement {
   const [defaultCurrency, setDefaultCurrency] = useState<"STARS" | "TON">("TON");
   const [timezone, setTimezone] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
+  const [starsToTonRate, setStarsToTonRate] = useState("");
 
   useEffect(() => {
     if (settings) {
@@ -34,6 +35,7 @@ export default function SettingsPage(): React.ReactElement {
       if (c === "STARS" || c === "TON") setDefaultCurrency(c);
       setTimezone(settings.timezone);
       setWalletAddress(settings.tonWalletAddress ?? "");
+      setStarsToTonRate(settings.starsToTonRate ?? "");
     }
   }, [settings]);
 
@@ -70,6 +72,7 @@ export default function SettingsPage(): React.ReactElement {
         defaultCommissionPermille: parseInt(commissionPermille || "0", 10),
         defaultCurrency,
         timezone,
+        starsToTonRate: starsToTonRate.trim() || null,
       });
     } catch {
       toast.error("Invalid commission value");
@@ -170,6 +173,49 @@ export default function SettingsPage(): React.ReactElement {
             <p className="text-xs text-muted-foreground">
               Browser: {Intl.DateTimeFormat().resolvedOptions().timeZone}
             </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stars→TON Rate */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Stars → TON Rate</CardTitle>
+          <CardDescription>
+            How many Stars = 1 TON. Used to show combined PnL across currencies.
+            Leave empty to hide cross-currency totals.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="starsToTonRate">Stars per 1 TON</Label>
+            <div className="flex gap-2">
+              <Input
+                id="starsToTonRate"
+                type="text"
+                inputMode="decimal"
+                value={starsToTonRate}
+                onChange={(e) => setStarsToTonRate(e.target.value.replace(/[^0-9.]/g, ""))}
+                placeholder="e.g. 770"
+                className="flex-1"
+              />
+              {starsToTonRate && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 self-center"
+                  onClick={() => setStarsToTonRate("")}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+            {starsToTonRate && parseFloat(starsToTonRate) > 0 && (
+              <p className="text-xs text-muted-foreground">
+                1 ★ ≈ {(1 / parseFloat(starsToTonRate)).toFixed(6)} TON
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

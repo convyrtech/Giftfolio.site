@@ -100,6 +100,41 @@ export function formatStars(stars: Stars): string {
 }
 
 /**
+ * Convert Stars to NanoTon using a rate string (Stars per 1 TON).
+ * Rate is expressed as "how many Stars = 1 TON" (e.g. "770" means 770 Stars = 1 TON).
+ * Returns nanoton equivalent of the given Stars amount.
+ */
+export function starsToNanoton(stars: Stars, rateStr: string): NanoTon {
+  // rate = Stars per 1 TON. So nanoton = stars / rate * 1e9
+  // To avoid floating point: nanoton = stars * 1e9 / rateParsed
+  // Parse rate string to a rational with 9 decimal places precision
+  const parts = rateStr.split(".");
+  const whole = parts[0] ?? "0";
+  let frac = parts[1] ?? "";
+  frac = frac.padEnd(9, "0").slice(0, 9);
+  const rateBig = BigInt(whole) * NANOTON_MULTIPLIER + BigInt(frac); // rate in "nano-Stars" units
+  if (rateBig === 0n) return 0n as NanoTon;
+  // stars * 1e9 * 1e9 / rateBig = nanoton
+  const result = (stars * NANOTON_MULTIPLIER * NANOTON_MULTIPLIER) / rateBig;
+  return result as NanoTon;
+}
+
+/**
+ * Convert NanoTon to Stars using a rate string (Stars per 1 TON).
+ */
+export function nanotonToStars(nanotons: NanoTon, rateStr: string): Stars {
+  // rate = Stars per 1 TON. So stars = nanotons * rate / 1e9
+  const parts = rateStr.split(".");
+  const whole = parts[0] ?? "0";
+  let frac = parts[1] ?? "";
+  frac = frac.padEnd(9, "0").slice(0, 9);
+  const rateBig = BigInt(whole) * NANOTON_MULTIPLIER + BigInt(frac);
+  // stars = nanotons * rateBig / (1e9 * 1e9)
+  const result = (nanotons * rateBig) / (NANOTON_MULTIPLIER * NANOTON_MULTIPLIER);
+  return result as Stars;
+}
+
+/**
  * Format NanoTon to raw TON number string (for calculations/display without suffix).
  * Handles negative values correctly.
  */

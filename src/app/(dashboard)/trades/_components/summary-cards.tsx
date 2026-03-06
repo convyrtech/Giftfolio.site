@@ -4,11 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc/client";
-import { formatStars, formatTon, type Stars, type NanoTon } from "@/lib/currencies";
+import { formatStars, formatTon, nanotonToStars, type Stars, type NanoTon } from "@/lib/currencies";
 import { formatNumber } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import { Diamond, Star, TrendingUp, Briefcase } from "lucide-react";
+import { Diamond, Star, TrendingUp, Briefcase, Sigma } from "lucide-react";
 
 const periods = ["total", "year", "month", "week", "day"] as const;
 type Period = (typeof periods)[number];
@@ -24,6 +24,7 @@ export function SummaryCards(): React.ReactElement {
     undefined,
     { staleTime: 60 * 60 * 1000 },
   );
+  const { data: settings } = trpc.settings.get.useQuery(undefined, { staleTime: 60_000 });
 
   if (isLoading) return <SummaryCardsSkeleton />;
   if (!data || data.length === 0) return <></>;
@@ -44,6 +45,15 @@ export function SummaryCards(): React.ReactElement {
     ? tonStat.totalSell - tonStat.totalBuy - tonStat.totalPermilleCommission
     : 0n;
 
+  // Combined PnL: convert TON profit to Stars using user rate
+  const rate = settings?.starsToTonRate;
+  const showCombined = rate && starsStat && tonStat;
+  let combinedStars: bigint | null = null;
+  if (showCombined) {
+    const tonAsStars = nanotonToStars(tonProfit as NanoTon, rate);
+    combinedStars = starsProfit + tonAsStars;
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -59,7 +69,7 @@ export function SummaryCards(): React.ReactElement {
         </Tabs>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className={cn("grid grid-cols-2 gap-3", showCombined ? "md:grid-cols-5" : "md:grid-cols-4")}>
         {tonStat && (
           <StatCard
             title="TON Profit"
@@ -78,6 +88,17 @@ export function SummaryCards(): React.ReactElement {
             isNegative={starsProfit < 0n}
             icon={<Star className="h-4 w-4" />}
             accentClass="border-stars-accent"
+          />
+        )}
+        {combinedStars !== null && (
+          <StatCard
+            title="Combined"
+            value={formatStars(combinedStars as Stars)}
+            subtitle={`@ ${rate} ★/TON`}
+            isPositive={combinedStars > 0n}
+            isNegative={combinedStars < 0n}
+            icon={<Sigma className="h-4 w-4" />}
+            accentClass="border-primary/50"
           />
         )}
         <StatCard
