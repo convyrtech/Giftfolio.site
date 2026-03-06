@@ -26,6 +26,7 @@ export default function SettingsPage(): React.ReactElement {
   const [timezone, setTimezone] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
   const [starsToTonRate, setStarsToTonRate] = useState("");
+  const [locale, setLocale] = useState<"en" | "ru" | "zh">("en");
 
   useEffect(() => {
     if (settings) {
@@ -36,13 +37,23 @@ export default function SettingsPage(): React.ReactElement {
       setTimezone(settings.timezone);
       setWalletAddress(settings.tonWalletAddress ?? "");
       setStarsToTonRate(settings.starsToTonRate ?? "");
+      const l = settings.locale;
+      if (l === "en" || l === "ru" || l === "zh") setLocale(l);
     }
   }, [settings]);
 
   const updateSettings = trpc.settings.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       void utils.settings.get.invalidate();
       toast.success("Settings saved");
+      // Sync locale cookie for next-intl (server reads it on next request)
+      if (variables.locale) {
+        const current = document.cookie.match(/(?:^|; )locale=([^;]*)/)?.[1];
+        if (current !== variables.locale) {
+          document.cookie = `locale=${variables.locale};path=/;max-age=${365 * 24 * 60 * 60};samesite=lax`;
+          window.location.reload();
+        }
+      }
     },
     onError: (err) => {
       toast.error(err.message);
@@ -73,6 +84,7 @@ export default function SettingsPage(): React.ReactElement {
         defaultCurrency,
         timezone,
         starsToTonRate: starsToTonRate.trim() || null,
+        locale,
       });
     } catch {
       toast.error("Invalid commission value");
@@ -173,6 +185,20 @@ export default function SettingsPage(): React.ReactElement {
             <p className="text-xs text-muted-foreground">
               Browser: {Intl.DateTimeFormat().resolvedOptions().timeZone}
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Language</Label>
+            <Select value={locale} onValueChange={(v) => { if (v === "en" || v === "ru" || v === "zh") setLocale(v); }}>
+              <SelectTrigger aria-label="Language">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="ru">Русский</SelectItem>
+                <SelectItem value="zh">中文</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
