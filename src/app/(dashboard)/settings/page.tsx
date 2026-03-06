@@ -172,7 +172,7 @@ export default function SettingsPage(): React.ReactElement {
       URL.revokeObjectURL(url);
       toast.success(t("configExportSuccess"));
     } catch {
-      toast.error(t("configImportError"));
+      toast.error(t("configExportError"));
     } finally {
       setExporting(false);
     }
@@ -195,16 +195,36 @@ export default function SettingsPage(): React.ReactElement {
           throw new Error("Unsupported backup version");
         }
 
-        // Restore settings into form state
+        // Restore settings — update form state AND save to server
         if (typeof data.settings === "object" && data.settings !== null) {
           const s = data.settings as Record<string, unknown>;
-          if (typeof s.defaultCommissionStars === "string") setCommissionStars(s.defaultCommissionStars);
-          if (typeof s.defaultCommissionPermille === "number") setCommissionPermille(String(s.defaultCommissionPermille));
-          if (s.defaultCurrency === "STARS" || s.defaultCurrency === "TON") setDefaultCurrency(s.defaultCurrency);
-          if (typeof s.timezone === "string") setTimezone(s.timezone);
-          if (typeof s.starsToTonRate === "string") setStarsToTonRate(s.starsToTonRate);
-          if (s.locale === "en" || s.locale === "ru" || s.locale === "zh") setLocale(s.locale);
-          if (profileTypes.includes(s.profileType as ProfileType)) setProfileType(s.profileType as ProfileType);
+          const restoredStars = typeof s.defaultCommissionStars === "string" ? s.defaultCommissionStars : commissionStars;
+          const restoredPermille = typeof s.defaultCommissionPermille === "number" ? s.defaultCommissionPermille : parseInt(commissionPermille || "0", 10);
+          const restoredCurrency = (s.defaultCurrency === "STARS" || s.defaultCurrency === "TON") ? s.defaultCurrency : defaultCurrency;
+          const restoredTz = typeof s.timezone === "string" ? s.timezone : timezone;
+          const restoredRate = typeof s.starsToTonRate === "string" ? s.starsToTonRate : starsToTonRate;
+          const restoredLocale = (s.locale === "en" || s.locale === "ru" || s.locale === "zh") ? s.locale : locale;
+          const restoredProfile = profileTypes.includes(s.profileType as ProfileType) ? (s.profileType as ProfileType) : profileType;
+
+          // Update form state
+          setCommissionStars(restoredStars);
+          setCommissionPermille(String(restoredPermille));
+          setDefaultCurrency(restoredCurrency);
+          setTimezone(restoredTz);
+          setStarsToTonRate(restoredRate);
+          setLocale(restoredLocale);
+          setProfileType(restoredProfile);
+
+          // Save to server immediately
+          updateSettings.mutate({
+            defaultCommissionStars: BigInt(restoredStars || "0"),
+            defaultCommissionPermille: restoredPermille,
+            defaultCurrency: restoredCurrency,
+            timezone: restoredTz,
+            starsToTonRate: restoredRate.trim() || null,
+            locale: restoredLocale,
+            profileType: restoredProfile,
+          });
         }
 
         // Import trades via bulkImport mutation
@@ -227,7 +247,7 @@ export default function SettingsPage(): React.ReactElement {
             { onSettled: () => setImporting(false) },
           );
         } else {
-          // No trades, just settings restored
+          // No trades — settings already saved above
           toast.success(t("configImportSuccess", { count: 0 }));
         }
       } catch {
@@ -357,11 +377,13 @@ export default function SettingsPage(): React.ReactElement {
           <CardDescription>{t("profileTypeDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label={t("profileType")}>
             {profileTypes.map((pt) => (
               <button
                 key={pt}
                 type="button"
+                role="radio"
+                aria-checked={profileType === pt}
                 onClick={() => setProfileType(pt)}
                 className={`rounded-lg border p-4 text-left transition-colors ${
                   profileType === pt
@@ -506,6 +528,7 @@ export default function SettingsPage(): React.ReactElement {
               type="file"
               accept=".json"
               className="hidden"
+              aria-label={t("configImportBtn")}
               onChange={handleImportFile}
             />
             <Button variant="outline" onClick={() => importFileRef.current?.click()} disabled={importing}>

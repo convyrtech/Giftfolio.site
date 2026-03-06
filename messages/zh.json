@@ -247,6 +247,7 @@
     "configExportDesc": "将所有交易和设置下载为 JSON 文件。用于备份或迁移。",
     "configExportBtn": "导出 JSON",
     "configExportSuccess": "数据导出成功",
+    "configExportError": "导出失败",
     "configImportBtn": "导入 JSON",
     "configImportDesc": "从之前导出的 JSON 备份中恢复。",
     "configImportSuccess": "已导入 {count} 笔交易",

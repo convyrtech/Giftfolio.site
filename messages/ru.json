@@ -247,6 +247,7 @@
     "configExportDesc": "Скачайте все сделки и настройки в формате JSON. Для резервного копирования или миграции.",
     "configExportBtn": "Экспорт JSON",
     "configExportSuccess": "Данные успешно экспортированы",
+    "configExportError": "Ошибка экспорта",
     "configImportBtn": "Импорт JSON",
     "configImportDesc": "Восстановить из ранее экспортированного JSON бэкапа.",
     "configImportSuccess": "Импортировано {count} сделок",

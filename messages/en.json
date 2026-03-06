@@ -247,6 +247,7 @@
     "configExportDesc": "Download all your trades and settings as a JSON file. Use for backup or migration.",
     "configExportBtn": "Export JSON",
     "configExportSuccess": "Data exported successfully",
+    "configExportError": "Export failed",
     "configImportBtn": "Import JSON",
     "configImportDesc": "Restore from a previously exported JSON backup.",
     "configImportSuccess": "Imported {count} trades",
