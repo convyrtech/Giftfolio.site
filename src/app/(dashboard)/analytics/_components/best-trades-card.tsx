@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { trpc } from "@/lib/trpc/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatStars, formatTon, type Stars, type NanoTon } from "@/lib/currencies";
@@ -20,13 +21,14 @@ interface TradeRowProps {
 }
 
 function TradeRow({ giftName, giftNumber, profit, currency, roiPercent }: TradeRowProps): React.ReactElement {
+  const t = useTranslations("analytics");
   const isPositive = profit > 0n;
   const isNegative = profit < 0n;
 
   return (
     <div className="flex items-center justify-between py-1">
       <div className="min-w-0 truncate text-sm">
-        {giftName ?? "Unknown"}
+        {giftName ?? t("unknown")}
         {giftNumber !== null && (
           <span className="ml-1 text-xs text-muted-foreground">#{String(giftNumber)}</span>
         )}
@@ -50,6 +52,7 @@ function TradeRow({ giftName, giftNumber, profit, currency, roiPercent }: TradeR
 }
 
 export function BestTradesCard(): React.ReactElement {
+  const t = useTranslations("analytics");
   const { data, isLoading } = trpc.analytics.bestTrades.useQuery(
     undefined,
     { staleTime: 5 * 60 * 1000 },
@@ -74,9 +77,9 @@ export function BestTradesCard(): React.ReactElement {
   if (!data || (!hasStars && !hasTon)) {
     return (
       <div className="rounded-lg border p-4">
-        <h3 className="mb-4 text-sm font-medium">Best & Worst Trades</h3>
+        <h3 className="mb-4 text-sm font-medium">{t("bestWorst")}</h3>
         <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
-          No closed trades
+          {t("noClosedTrades")}
         </div>
       </div>
     );
@@ -84,7 +87,7 @@ export function BestTradesCard(): React.ReactElement {
 
   return (
     <div className="rounded-lg border p-4">
-      <h3 className="mb-4 text-sm font-medium">Best & Worst Trades</h3>
+      <h3 className="mb-4 text-sm font-medium">{t("bestWorst")}</h3>
 
       <div className="space-y-4">
         {/* Best trades */}
@@ -92,7 +95,7 @@ export function BestTradesCard(): React.ReactElement {
           <div>
             <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <Trophy className="h-3.5 w-3.5 text-profit" />
-              Top Trades
+              {t("topTrades")}
             </div>
             {data.bestStars.map((t) => (
               <TradeRow
@@ -122,7 +125,7 @@ export function BestTradesCard(): React.ReactElement {
           <div>
             <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <TrendingDown className="h-3.5 w-3.5 text-loss" />
-              Worst Trades
+              {t("worstTrades")}
             </div>
             {data.worstStars && (
               <TradeRow

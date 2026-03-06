@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +24,8 @@ export function InlineNotesCell({
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const t = useTranslations("trades");
+  const tc = useTranslations("common");
   const hasNotes = notes !== null && notes.trim().length > 0;
 
   function handleOpen(isOpen: boolean): void {
@@ -51,7 +54,7 @@ export function InlineNotesCell({
             "hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
             hasNotes ? "text-foreground" : "text-muted-foreground/40",
           )}
-          aria-label={hasNotes ? "Edit notes" : "Add notes"}
+          aria-label={t("notes")}
           title={hasNotes && notes ? (notes.length > 200 ? notes.slice(0, 200) + "…" : notes) : undefined}
         >
           <StickyNote className="h-4 w-4" />
@@ -62,7 +65,7 @@ export function InlineNotesCell({
           <Textarea
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder="Add notes..."
+            placeholder={t("notesPlaceholder")}
             maxLength={1000}
             rows={3}
             className="text-sm"
@@ -75,7 +78,7 @@ export function InlineNotesCell({
               disabled={saving}
               onClick={() => void handleSave()}
             >
-              {saving ? "Saving..." : "Save"}
+              {saving ? tc("saving") : tc("save")}
             </Button>
           </div>
         </div>

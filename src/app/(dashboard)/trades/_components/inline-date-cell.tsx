@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -29,6 +30,7 @@ export function InlineDateCell({
 }: InlineDateCellProps): React.ReactElement {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const t = useTranslations("trades");
 
   async function handleSelect(date: Date | undefined) {
     if (!date) return;
@@ -51,9 +53,7 @@ export function InlineDateCell({
             "hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
             saving && "opacity-50 pointer-events-none",
           )}
-          aria-label={
-            value ? `Edit date: ${formatDate(value)}` : "Set date"
-          }
+          aria-label={t("pickDate")}
         >
           {saving ? (
             <span className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />

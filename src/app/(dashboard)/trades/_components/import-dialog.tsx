@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Upload, AlertCircle, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,9 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
   const [headerError, setHeaderError] = useState<string | null>(null);
   const [skipErrors, setSkipErrors] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
+
+  const ti = useTranslations("import");
+  const tc = useTranslations("common");
 
   const utils = trpc.useUtils();
   const importMutation = trpc.trades.bulkImport.useMutation({
@@ -84,7 +88,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
       if (!file) return;
 
       if (file.size > MAX_FILE_SIZE) {
-        setHeaderError(`File too large (${(file.size / 1024).toFixed(0)} KB). Maximum is ${MAX_FILE_SIZE / 1024} KB.`);
+        setHeaderError(ti("fileTooLarge", { size: (file.size / 1024).toFixed(0), max: String(MAX_FILE_SIZE / 1024) }));
         setStep("preview");
         return;
       }
@@ -101,13 +105,13 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
             const workbook = XLSX.read(data, { type: "array" });
             const firstSheetName = workbook.SheetNames[0];
             if (!firstSheetName) {
-              setHeaderError("Empty workbook — no sheets found");
+              setHeaderError(ti("emptyWorkbook"));
               setStep("preview");
               return;
             }
             const sheet = workbook.Sheets[firstSheetName];
             if (!sheet) {
-              setHeaderError("Empty workbook — no sheets found");
+              setHeaderError(ti("emptyWorkbook"));
               setStep("preview");
               return;
             }
@@ -119,7 +123,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
             });
             processRows(rawRows);
           } catch {
-            setHeaderError("Failed to parse Excel file");
+            setHeaderError(ti("failedParse"));
             setStep("preview");
           }
         };
@@ -137,7 +141,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
       // Reset file input so same file can be re-selected
       e.target.value = "";
     },
-    [processRows],
+    [processRows, ti],
   );
 
   const handleImport = useCallback(() => {
@@ -157,12 +161,12 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
       }));
 
     if (validRows.length === 0) {
-      toast.error("No valid rows to import");
+      toast.error(ti("noValidRows"));
       return;
     }
 
     importMutation.mutate({ rows: validRows, skipErrors });
-  }, [parsedRows, skipErrors, importMutation]);
+  }, [parsedRows, skipErrors, importMutation, ti]);
 
   const validCount = parsedRows.filter((r) => r.errors.length === 0).length;
   const errorCount = parsedRows.filter((r) => r.errors.length > 0).length;
@@ -171,9 +175,9 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Import Trades</DialogTitle>
+          <DialogTitle>{ti("title")}</DialogTitle>
           <DialogDescription>
-            Upload a CSV or Excel (.xlsx) file matching the export format.
+            {ti("description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -181,17 +185,17 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
           <div className="flex flex-col items-center gap-4 py-8">
             <Upload className="h-10 w-10 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              Max {MAX_IMPORT_ROWS} rows, {MAX_FILE_SIZE / 1024} KB
+              {ti("maxRows", { rows: MAX_IMPORT_ROWS, size: MAX_FILE_SIZE / 1024 })}
             </p>
             <label className="cursor-pointer">
               <Button variant="outline" asChild>
-                <span>Choose file</span>
+                <span>{ti("chooseFile")}</span>
               </Button>
               <input
                 type="file"
                 accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 className="hidden"
-                aria-label="Upload CSV or Excel file"
+                aria-label={ti("uploadLabel")}
                 onChange={handleFileSelect}
               />
             </label>
@@ -211,12 +215,12 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
                 <div className="flex items-center gap-4 text-sm">
                   <span className="flex items-center gap-1.5">
                     <CheckCircle className="h-4 w-4 text-profit" />
-                    {validCount} valid
+                    {ti("validCount", { count: validCount })}
                   </span>
                   {errorCount > 0 && (
                     <span className="flex items-center gap-1.5">
                       <AlertCircle className="h-4 w-4 text-destructive" />
-                      {errorCount} errors
+                      {ti("errorCount", { count: errorCount })}
                     </span>
                   )}
                 </div>
@@ -226,13 +230,13 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
                   <table className="w-full text-xs">
                     <thead className="sticky top-0 bg-muted">
                       <tr>
-                        <th className="px-2 py-1.5 text-left font-medium">#</th>
-                        <th className="px-2 py-1.5 text-left font-medium">Gift</th>
-                        <th className="px-2 py-1.5 text-left font-medium">Qty</th>
-                        <th className="px-2 py-1.5 text-left font-medium">Currency</th>
-                        <th className="px-2 py-1.5 text-left font-medium">Buy</th>
-                        <th className="px-2 py-1.5 text-left font-medium">Sell</th>
-                        <th className="px-2 py-1.5 text-left font-medium">Status</th>
+                        <th className="px-2 py-1.5 text-left font-medium">{ti("colNumber")}</th>
+                        <th className="px-2 py-1.5 text-left font-medium">{ti("colGift")}</th>
+                        <th className="px-2 py-1.5 text-left font-medium">{ti("colQty")}</th>
+                        <th className="px-2 py-1.5 text-left font-medium">{ti("colCurrency")}</th>
+                        <th className="px-2 py-1.5 text-left font-medium">{ti("colBuy")}</th>
+                        <th className="px-2 py-1.5 text-left font-medium">{ti("colSell")}</th>
+                        <th className="px-2 py-1.5 text-left font-medium">{ti("colStatus")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -265,7 +269,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
                                 {row.errors[0]}
                               </span>
                             ) : (
-                              <span className="text-profit">OK</span>
+                              <span className="text-profit">{ti("ok")}</span>
                             )}
                           </td>
                         </tr>
@@ -274,7 +278,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
                   </table>
                   {parsedRows.length > 50 && (
                     <div className="border-t px-2 py-1.5 text-center text-xs text-muted-foreground">
-                      Showing first 50 of {parsedRows.length} rows
+                      {ti("showingFirst", { count: parsedRows.length })}
                     </div>
                   )}
                 </div>
@@ -286,7 +290,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
                       checked={skipErrors}
                       onCheckedChange={(v) => setSkipErrors(v === true)}
                     />
-                    Skip {errorCount} rows with errors, import {validCount} valid rows
+                    {ti("skipErrors", { skipCount: errorCount, validCount })}
                   </label>
                 )}
               </>
@@ -294,7 +298,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
 
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={reset}>
-                Back
+                {tc("back")}
               </Button>
               {!headerError && validCount > 0 && (
                 <Button
@@ -302,8 +306,8 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
                   disabled={importMutation.isPending}
                 >
                   {importMutation.isPending
-                    ? "Importing..."
-                    : `Import ${validCount} trade${validCount !== 1 ? "s" : ""}`}
+                    ? tc("importing")
+                    : ti("importCount", { count: validCount })}
                 </Button>
               )}
             </DialogFooter>
@@ -316,11 +320,11 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
               <CheckCircle className="mt-0.5 h-5 w-5 text-profit" />
               <div>
                 <p className="font-medium">
-                  Imported {result.inserted} trade{result.inserted !== 1 ? "s" : ""}
+                  {ti("importedCount", { count: result.inserted })}
                 </p>
                 {result.skipped > 0 && (
                   <p className="text-sm text-muted-foreground">
-                    {result.skipped} row{result.skipped !== 1 ? "s" : ""} skipped
+                    {ti("skippedCount", { count: result.skipped })}
                   </p>
                 )}
               </div>
@@ -330,14 +334,14 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
               <div className="max-h-[150px] overflow-auto rounded-md border p-2 text-xs">
                 {result.errors.map((err) => (
                   <div key={err.row} className="text-destructive">
-                    Row {err.row}: {err.message}
+                    {ti("rowError", { num: err.row, message: err.message })}
                   </div>
                 ))}
               </div>
             )}
 
             <DialogFooter>
-              <Button onClick={() => handleClose(false)}>Done</Button>
+              <Button onClick={() => handleClose(false)}>{tc("done")}</Button>
             </DialogFooter>
           </div>
         )}

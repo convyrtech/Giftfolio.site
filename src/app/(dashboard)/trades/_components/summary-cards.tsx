@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +16,7 @@ type Period = (typeof periods)[number];
 
 export function SummaryCards(): React.ReactElement {
   const [period, setPeriod] = useState<Period>("total");
+  const t = useTranslations("dashboard");
 
   const { data, isLoading } = trpc.stats.dashboard.useQuery(
     { period },
@@ -57,14 +59,14 @@ export function SummaryCards(): React.ReactElement {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-muted-foreground">Dashboard</h2>
+        <h2 className="text-sm font-medium text-muted-foreground">{t("title")}</h2>
         <Tabs value={period} onValueChange={(v) => { if ((periods as readonly string[]).includes(v)) setPeriod(v as Period); }}>
           <TabsList className="h-8">
-            <TabsTrigger value="total" className="text-xs px-2">All</TabsTrigger>
-            <TabsTrigger value="year" className="text-xs px-2">Year</TabsTrigger>
-            <TabsTrigger value="month" className="text-xs px-2">Month</TabsTrigger>
-            <TabsTrigger value="week" className="text-xs px-2">Week</TabsTrigger>
-            <TabsTrigger value="day" className="text-xs px-2">Day</TabsTrigger>
+            <TabsTrigger value="total" className="text-xs px-2">{t("periodAll")}</TabsTrigger>
+            <TabsTrigger value="year" className="text-xs px-2">{t("periodYear")}</TabsTrigger>
+            <TabsTrigger value="month" className="text-xs px-2">{t("periodMonth")}</TabsTrigger>
+            <TabsTrigger value="week" className="text-xs px-2">{t("periodWeek")}</TabsTrigger>
+            <TabsTrigger value="day" className="text-xs px-2">{t("periodDay")}</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -72,7 +74,7 @@ export function SummaryCards(): React.ReactElement {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {tonStat && (
           <StatCard
-            title="TON Profit"
+            title={t("tonProfit")}
             value={formatTon(tonProfit as NanoTon)}
             isPositive={tonProfit > 0n}
             isNegative={tonProfit < 0n}
@@ -82,7 +84,7 @@ export function SummaryCards(): React.ReactElement {
         )}
         {starsStat && (
           <StatCard
-            title="Stars Profit"
+            title={t("starsProfit")}
             value={formatStars(starsProfit as Stars)}
             isPositive={starsProfit > 0n}
             isNegative={starsProfit < 0n}
@@ -92,9 +94,9 @@ export function SummaryCards(): React.ReactElement {
         )}
         {combinedStars !== null && (
           <StatCard
-            title="Combined"
+            title={t("combined")}
             value={formatStars(combinedStars as Stars)}
-            subtitle={`@ ${rate} ★/TON`}
+            subtitle={t("combinedRate", { rate: rate! })}
             isPositive={combinedStars > 0n}
             isNegative={combinedStars < 0n}
             icon={<Sigma className="h-4 w-4" />}
@@ -102,14 +104,14 @@ export function SummaryCards(): React.ReactElement {
           />
         )}
         <StatCard
-          title="Total Trades"
+          title={t("totalTrades")}
           value={formatNumber(totalTrades)}
-          subtitle={`${closedTrades} closed`}
+          subtitle={t("closedCount", { count: closedTrades })}
           icon={<TrendingUp className="h-4 w-4" />}
           accentClass="border-primary/50"
         />
         <StatCard
-          title={portfolio?.available ? "Portfolio Value" : "Open Positions"}
+          title={portfolio?.available ? t("portfolioValue") : t("openPositions")}
           value={
             portfolioLoading
               ? "..."
@@ -163,8 +165,9 @@ function StatCard({ title, value, subtitle, isPositive, isNegative, icon, accent
 }
 
 function SummaryCardsSkeleton(): React.ReactElement {
+  const t = useTranslations("dashboard");
   return (
-    <div className="space-y-3" role="status" aria-label="Loading dashboard stats">
+    <div className="space-y-3" role="status" aria-label={t("loadingStats")}>
       <Skeleton className="h-5 w-24" />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (

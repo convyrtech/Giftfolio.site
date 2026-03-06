@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +27,8 @@ export function DeleteTradeDialog({
   trade,
 }: DeleteTradeDialogProps): React.ReactElement {
   const utils = trpc.useUtils();
+  const t = useTranslations("trades");
+  const tc = useTranslations("common");
 
   const softDelete = trpc.trades.softDelete.useMutation({
     onSuccess: () => {
@@ -33,9 +36,9 @@ export function DeleteTradeDialog({
       void utils.stats.dashboard.invalidate();
       onOpenChange(false);
 
-      toast("Trade deleted", {
+      toast(t("tradeDeleted"), {
         action: {
-          label: "Undo",
+          label: t("undo"),
           onClick: () => {
             restore.mutate({ id: trade.id });
           },
@@ -52,26 +55,28 @@ export function DeleteTradeDialog({
     onSuccess: () => {
       void utils.trades.list.invalidate();
       void utils.stats.dashboard.invalidate();
-      toast.success("Trade restored");
+      toast.success(t("tradeRestored"));
     },
   });
+
+  const tradeName = trade.giftName + (trade.giftNumber !== null ? ` #${String(trade.giftNumber)}` : "");
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete trade?</AlertDialogTitle>
+          <AlertDialogTitle>{t("deleteTradeTitle")}</AlertDialogTitle>
           <AlertDialogDescription>
-            Delete trade {trade.giftName}{trade.giftNumber !== null ? ` #${String(trade.giftNumber)}` : ""}? You can undo this within 5 seconds.
+            {t("deleteTradeDesc", { name: tradeName })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{tc("cancel")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={() => softDelete.mutate({ id: trade.id })}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            Delete
+            {tc("delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

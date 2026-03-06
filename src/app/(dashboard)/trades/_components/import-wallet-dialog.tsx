@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Wallet, AlertCircle, CheckCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,8 +69,10 @@ export function ImportWalletDialog({
   const [sellMatches, setSellMatches] = useState<SellMatch[]>([]);
   const [selectedSellIds, setSelectedSellIds] = useState<Set<string>>(new Set());
   const [eventsFetched, setEventsFetched] = useState(0);
-  const [wasRateLimited, setWasRateLimited] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
+
+  const tw = useTranslations("walletImport");
+  const tc = useTranslations("common");
 
   const utils = trpc.useUtils();
 
@@ -77,11 +80,8 @@ export function ImportWalletDialog({
     onSuccess: (data) => {
       setAllTrades(data.trades);
       setEventsFetched(data.eventsFetched);
-      setWasRateLimited(data.rateLimited);
-      // Pre-select all trades (server returns only buy-side)
       const buyIds = data.trades.map((t) => t.eventId);
       setSelectedIds(new Set(buyIds));
-      // Handle sell matches
       setSellMatches(data.sellMatches);
       const matchedSellIds = data.sellMatches
         .filter((s) => s.matchedTradeId !== null)
@@ -113,7 +113,6 @@ export function ImportWalletDialog({
     setSellMatches([]);
     setSelectedSellIds(new Set());
     setEventsFetched(0);
-    setWasRateLimited(false);
     setResult(null);
     setWalletInput(savedWalletAddress ?? "");
   }, [savedWalletAddress]);
@@ -129,13 +128,12 @@ export function ImportWalletDialog({
   const handleScan = (): void => {
     const address = walletInput.trim();
     if (!address) {
-      toast.error("Enter a TON wallet address");
+      toast.error(tw("enterAddress"));
       return;
     }
     previewMutation.mutate({ walletAddress: address });
   };
 
-  // Server returns only buy-side trades in walletImportPreview
   const buyTrades = allTrades;
 
   const matchedSells = sellMatches.filter((s) => s.matchedTradeId !== null);
@@ -176,7 +174,7 @@ export function ImportWalletDialog({
     const selectedSells = matchedSells.filter((s) => selectedSellIds.has(s.eventId));
 
     if (selectedBuys.length === 0 && selectedSells.length === 0) {
-      toast.error("Select at least one trade to import");
+      toast.error(tw("selectAtLeastOne"));
       return;
     }
 
@@ -215,7 +213,6 @@ export function ImportWalletDialog({
         });
       }
     } catch {
-      // onError toast already fires via mutation options — stay on preview so user can retry
       return;
     }
 
@@ -240,45 +237,43 @@ export function ImportWalletDialog({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Wallet className="h-5 w-5" />
-                Import from TON Wallet
+                {tw("title")}
               </DialogTitle>
               <DialogDescription>
-                Scan your TON wallet history for Telegram gift purchases and sales. Buy-side
-                marketplace transactions are imported as new trades; sell-side transactions close
-                matching open positions.
+                {tw("description")}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label htmlFor="wallet-input">TON Wallet Address</Label>
+                <Label htmlFor="wallet-input">{tw("addressLabel")}</Label>
                 <Input
                   id="wallet-input"
                   value={walletInput}
                   onChange={(e) => setWalletInput(e.target.value)}
-                  placeholder="UQA... or EQ..."
+                  placeholder={tw("addressPlaceholder")}
                   className="font-mono text-sm"
                   disabled={previewMutation.isPending}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Scans up to 1000 recent events. May take up to ~15 seconds on the first run.
+                {tw("scanHint")}
               </p>
             </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => handleOpenChange(false)}>
-                Cancel
+                {tc("cancel")}
               </Button>
               <Button
                 onClick={handleScan}
                 disabled={previewMutation.isPending || !walletInput.trim()}
               >
                 {previewMutation.isPending ? (
-                  "Scanning wallet..."
+                  tw("scanning")
                 ) : (
                   <>
-                    Scan wallet <ArrowRight className="ml-1 h-4 w-4" />
+                    {tw("scanWallet")} <ArrowRight className="ml-1 h-4 w-4" />
                   </>
                 )}
               </Button>
@@ -289,13 +284,13 @@ export function ImportWalletDialog({
         {step === "preview" && (
           <>
             <DialogHeader>
-              <DialogTitle>Review Detected Trades</DialogTitle>
+              <DialogTitle>{tw("reviewTitle")}</DialogTitle>
               <DialogDescription>
-                Found {buyTrades.length} gift purchase
-                {buyTrades.length !== 1 ? "s" : ""}
-                {sellMatches.length > 0 && ` and ${sellMatches.length} sale${sellMatches.length !== 1 ? "s" : ""}`}
-                {" "}in {eventsFetched} wallet events.
-                {wasRateLimited && " Scan stopped early due to rate limit."}
+                {tw("reviewDesc", {
+                  purchases: buyTrades.length,
+                  sales: sellMatches.length,
+                  events: eventsFetched,
+                })}
               </DialogDescription>
             </DialogHeader>
 
@@ -303,12 +298,13 @@ export function ImportWalletDialog({
               <Tabs defaultValue="buys">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="buys">
-                    Purchases ({buyTrades.length})
+                    {tw("purchasesTab", { count: buyTrades.length })}
                   </TabsTrigger>
                   <TabsTrigger value="sells">
-                    Sales
-                    {matchedSells.length > 0 && ` (${matchedSells.length})`}
-                    {unmatchedSells.length > 0 && ` · ${unmatchedSells.length} unmatched`}
+                    {tw("salesTab", {
+                      matched: matchedSells.length > 0 ? `(${matchedSells.length})` : "",
+                      unmatched: unmatchedSells.length > 0 ? `· ${unmatchedSells.length}` : "",
+                    })}
                   </TabsTrigger>
                 </TabsList>
 
@@ -316,12 +312,11 @@ export function ImportWalletDialog({
                   {buyTrades.length === 0 ? (
                     <div className="flex flex-col items-center gap-2 py-8 text-center text-muted-foreground">
                       <AlertCircle className="h-8 w-8" />
-                      <p className="text-sm">No gift purchases found in this wallet&apos;s history.</p>
-                      <p className="text-xs">Only marketplace buy transactions (with price) are detectable.</p>
+                      <p className="text-sm">{tw("noPurchases")}</p>
+                      <p className="text-xs">{tw("purchasesHint")}</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {/* Select all */}
                       <div className="flex items-center gap-2 border-b pb-2">
                         <Checkbox
                           id="select-all-wallet"
@@ -338,16 +333,15 @@ export function ImportWalletDialog({
                           htmlFor="select-all-wallet"
                           className="cursor-pointer text-sm font-medium"
                         >
-                          Select all ({buyTrades.length})
+                          {tw("selectAllCount", { count: buyTrades.length })}
                         </label>
                       </div>
 
-                      {/* Trade list — keyboard navigable, accessible */}
                       <div
                         className="max-h-60 overflow-y-auto space-y-1 pr-1"
                         tabIndex={0}
                         role="list"
-                        aria-label="Detected gift purchases"
+                        aria-label={tw("detectedPurchases")}
                       >
                         {buyTrades.map((trade) => (
                           <div
@@ -395,19 +389,19 @@ export function ImportWalletDialog({
                 <TabsContent value="sells" className="mt-3">
                   {matchedSells.length === 0 && unmatchedSells.length === 0 ? (
                     <div className="flex flex-col items-center gap-2 py-8 text-center text-muted-foreground">
-                      <p className="text-sm">No sales detected in this wallet scan.</p>
+                      <p className="text-sm">{tw("noSales")}</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
                       {matchedSells.length > 0 && (
                         <>
                           <p className="text-xs text-muted-foreground pb-1">
-                            These sales match open positions and will close them automatically:
+                            {tw("salesNote")}
                           </p>
                           <div
                             className="max-h-60 overflow-y-auto space-y-1 pr-1"
                             role="list"
-                            aria-label="Matched sales"
+                            aria-label={tw("matchedSales")}
                           >
                             {matchedSells.map((sell) => (
                               <div
@@ -430,7 +424,7 @@ export function ImportWalletDialog({
                                       <span className="text-muted-foreground">#{sell.giftNumber}</span>
                                     </span>
                                     <div className="text-xs text-muted-foreground">
-                                      {new Date(sell.timestamp * 1000).toLocaleDateString()} · closes open position
+                                      {new Date(sell.timestamp * 1000).toLocaleDateString()} · {tw("closesOpen")}
                                     </div>
                                   </div>
                                   <span className="tabular-nums text-sm shrink-0 text-loss">
@@ -444,8 +438,7 @@ export function ImportWalletDialog({
                       )}
                       {unmatchedSells.length > 0 && (
                         <div className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                          {unmatchedSells.length} sale{unmatchedSells.length !== 1 ? "s" : ""} detected
-                          but no matching open position found — skipped automatically.
+                          {tw("unmatchedNote", { count: unmatchedSells.length })}
                         </div>
                       )}
                     </div>
@@ -456,7 +449,7 @@ export function ImportWalletDialog({
 
             <DialogFooter>
               <Button variant="outline" onClick={reset}>
-                Back
+                {tc("back")}
               </Button>
               <Button
                 onClick={() => { void handleConfirm(); }}
@@ -467,8 +460,8 @@ export function ImportWalletDialog({
                 }
               >
                 {confirmMutation.isPending || sellConfirmMutation.isPending
-                  ? "Importing..."
-                  : `Import ${totalSelected} action${totalSelected !== 1 ? "s" : ""}`}
+                  ? tc("importing")
+                  : tw("importActions", { count: totalSelected })}
               </Button>
             </DialogFooter>
           </>
@@ -479,25 +472,25 @@ export function ImportWalletDialog({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-profit" />
-                Import Complete
+                {tw("completeTitle")}
               </DialogTitle>
             </DialogHeader>
 
             <div className="space-y-3 py-2">
               <div className="rounded-md border bg-muted/50 p-4 space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Imported</span>
+                  <span className="text-muted-foreground">{tw("imported")}</span>
                   <span className="font-medium text-profit">{result.inserted}</span>
                 </div>
                 {result.closed > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Positions closed</span>
+                    <span className="text-muted-foreground">{tw("positionsClosed")}</span>
                     <span className="font-medium text-profit">{result.closed}</span>
                   </div>
                 )}
                 {result.skipped > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Skipped (duplicates)</span>
+                    <span className="text-muted-foreground">{tw("skippedDuplicates")}</span>
                     <span className="font-medium text-muted-foreground">{result.skipped}</span>
                   </div>
                 )}
@@ -505,7 +498,7 @@ export function ImportWalletDialog({
 
               {result.errors.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">Skipped imports:</p>
+                  <p className="text-xs font-medium text-muted-foreground">{tw("skippedImports")}</p>
                   <ul className="max-h-32 overflow-y-auto space-y-1">
                     {result.errors.map((e, i) => (
                       <li key={`${e.row}-${i}`} className="flex gap-2 text-xs text-muted-foreground">
@@ -518,7 +511,7 @@ export function ImportWalletDialog({
               )}
               {result.sellErrors.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">Failed to close:</p>
+                  <p className="text-xs font-medium text-muted-foreground">{tw("failedClose")}</p>
                   <ul className="max-h-24 overflow-y-auto space-y-1">
                     {result.sellErrors.map((e, i) => (
                       <li key={`${e.eventId}-${i}`} className="flex gap-2 text-xs text-muted-foreground">
@@ -531,7 +524,7 @@ export function ImportWalletDialog({
             </div>
 
             <DialogFooter>
-              <Button onClick={() => handleOpenChange(false)}>Done</Button>
+              <Button onClick={() => handleOpenChange(false)}>{tc("done")}</Button>
             </DialogFooter>
           </>
         )}

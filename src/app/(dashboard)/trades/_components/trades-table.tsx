@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   useReactTable,
   getCoreRowModel,
@@ -21,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import type { Trade } from "@/server/db/schema";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { columns, type TradesTableMeta } from "./columns";
+import { useTradeColumns, type TradesTableMeta } from "./columns";
 import { EmptyState } from "./empty-state";
 import { TradeFormDialog } from "./trade-form-dialog";
 import { DeleteTradeDialog } from "./delete-trade-dialog";
@@ -47,6 +48,8 @@ export function TradesTable({
   const [editTrade, setEditTrade] = useState<Trade | null>(null);
   const [deleteTrade, setDeleteTrade] = useState<Trade | null>(null);
   const utils = trpc.useUtils();
+  const columns = useTradeColumns();
+  const t = useTranslations("trades");
 
   // Cap in-memory pages to prevent unbounded growth (50 items × 20 pages = 1,000 trades max)
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
@@ -62,7 +65,7 @@ export function TradesTable({
     onSuccess: () => {
       void utils.trades.list.invalidate();
       void utils.stats.dashboard.invalidate();
-      toast.success("Visibility updated");
+      toast.success(t("tradeUpdated"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -71,7 +74,7 @@ export function TradesTable({
     onSuccess: () => {
       void utils.trades.list.invalidate();
       void utils.stats.dashboard.invalidate();
-      toast.success("PnL setting updated");
+      toast.success(t("tradeUpdated"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -81,7 +84,7 @@ export function TradesTable({
       void utils.trades.list.invalidate();
       void utils.stats.dashboard.invalidate();
       void utils.analytics.invalidate();
-      toast.success("Saved");
+      toast.success(t("tradeUpdated"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -221,7 +224,7 @@ export function TradesTable({
       {isFetchingNextPage && (
         <div className="flex justify-center py-4" role="status" aria-live="polite">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span className="sr-only">Loading more trades</span>
+          <span className="sr-only">{t("loadingMore")}</span>
         </div>
       )}
 
@@ -243,20 +246,21 @@ export function TradesTable({
 }
 
 function TradesTableSkeleton(): React.ReactElement {
+  const t = useTranslations("trades");
   return (
-    <div className="rounded-md border" role="status" aria-label="Loading trades">
+    <div className="rounded-md border" role="status" aria-label={t("columnGift")}>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-10" />
-            <TableHead>Gift</TableHead>
-            <TableHead>Currency</TableHead>
-            <TableHead>Bought</TableHead>
-            <TableHead>Sold</TableHead>
-            <TableHead>Buy Price</TableHead>
-            <TableHead>Sell Price</TableHead>
-            <TableHead>Profit</TableHead>
-            <TableHead>Floor / PnL</TableHead>
+            <TableHead>{t("columnGift")}</TableHead>
+            <TableHead>{t("columnCurrency")}</TableHead>
+            <TableHead>{t("columnBought")}</TableHead>
+            <TableHead>{t("columnSold")}</TableHead>
+            <TableHead>{t("columnBuyPrice")}</TableHead>
+            <TableHead>{t("columnSellPrice")}</TableHead>
+            <TableHead>{t("columnProfit")}</TableHead>
+            <TableHead>{t("columnFloorPnl")}</TableHead>
             <TableHead />
           </TableRow>
         </TableHeader>

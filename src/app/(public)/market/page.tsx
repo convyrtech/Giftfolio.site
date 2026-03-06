@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { getGiftBubblesData } from "@/lib/gift-bubbles";
 import { MarketTable } from "./_components/market-table";
 import { StaleBanner } from "./_components/stale-banner";
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
 };
 
 export default async function MarketPage(): Promise<React.ReactElement> {
+  const t = await getTranslations("market");
   const data = await getGiftBubblesData();
 
   // Format as "HH:MM UTC" — absolute time, safe with ISR cached HTML
@@ -27,16 +29,16 @@ export default async function MarketPage(): Promise<React.ReactElement> {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Market</h1>
+          <h1 className="text-xl font-semibold">{t("title")}</h1>
           <p className="text-sm text-muted-foreground">
             {data.available
-              ? `${data.items.length} gift collections`
-              : "Market data unavailable"}
+              ? t("giftCollections", { count: data.items.length })
+              : t("dataUnavailable")}
           </p>
         </div>
       </div>
 
-      {data.stale && <StaleBanner fetchedAtLabel={fetchedAtLabel} />}
+      {data.stale && <StaleBanner message={t("staleBanner", { time: fetchedAtLabel })} />}
 
       <MarketTable items={data.items} available={data.available} />
     </div>

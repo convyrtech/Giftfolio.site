@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,7 @@ export function CommissionOverrideSection({
   permille,
   onPermilleChange,
 }: CommissionOverrideSectionProps): React.ReactElement {
+  const t = useTranslations("trades");
   return (
     <div className="space-y-2">
       <button
@@ -32,11 +34,11 @@ export function CommissionOverrideSection({
         onClick={onToggle}
       >
         <ChevronDown className={cn("h-3 w-3 transition-transform", expanded && "rotate-180")} />
-        Commission override
+        {t("commissionOverride")}
       </button>
       <div id="commission-override-content" className={cn("grid grid-cols-2 gap-3", !expanded && "hidden")}>
         <div className="space-y-1">
-          <Label htmlFor="commFlat" className="text-xs">Flat (Stars)</Label>
+          <Label htmlFor="commFlat" className="text-xs">{t("commFlat")}</Label>
           <Input
             id="commFlat"
             type="text"
@@ -47,7 +49,7 @@ export function CommissionOverrideSection({
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="commPermille" className="text-xs">Permille (0-1000)</Label>
+          <Label htmlFor="commPermille" className="text-xs">{t("commPermille")}</Label>
           <Input
             id="commPermille"
             type="text"

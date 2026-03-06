@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import Image from "next/image";
 import { CalendarIcon } from "lucide-react";
@@ -70,15 +71,16 @@ export function TradeFormDialog({
 }: TradeFormDialogProps): React.ReactElement {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const isEdit = !!trade;
+  const t = useTranslations("trades");
 
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{isEdit ? "Edit trade" : "Add trade"}</DialogTitle>
+            <DialogTitle>{isEdit ? t("editTrade") : t("addTrade")}</DialogTitle>
             <DialogDescription className="sr-only">
-              {isEdit ? "Edit trade details" : "Enter new trade details"}
+              {isEdit ? t("editTradeDesc") : t("addTradeDesc")}
             </DialogDescription>
           </DialogHeader>
           <TradeForm trade={trade} onSuccess={() => onOpenChange(false)} />
@@ -91,9 +93,9 @@ export function TradeFormDialog({
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
         <DrawerHeader>
-          <DrawerTitle>{isEdit ? "Edit trade" : "Add trade"}</DrawerTitle>
+          <DrawerTitle>{isEdit ? t("editTrade") : t("addTrade")}</DrawerTitle>
           <DrawerDescription className="sr-only">
-            {isEdit ? "Edit trade details" : "Enter new trade details"}
+            {isEdit ? t("editTradeDesc") : t("addTradeDesc")}
           </DrawerDescription>
         </DrawerHeader>
         <div className="px-4 pb-6">
@@ -112,6 +114,8 @@ interface TradeFormProps {
 function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
   const utils = trpc.useUtils();
   const isEdit = !!trade;
+  const t = useTranslations("trades");
+  const tc = useTranslations("common");
 
   // Mode state (only for add)
   const [mode, setMode] = useState<TradeMode>("item");
@@ -188,7 +192,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
       void utils.trades.list.invalidate();
       void utils.stats.dashboard.invalidate();
       void utils.stats.portfolioValue.invalidate();
-      toast.success("Trade added");
+      toast.success(t("tradeAdded"));
       onSuccess();
     },
     onError: (err) => {
@@ -200,7 +204,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
     onSuccess: () => {
       void utils.trades.list.invalidate();
       void utils.stats.dashboard.invalidate();
-      toast.success("Trade updated");
+      toast.success(t("tradeUpdated"));
       onSuccess();
     },
     onError: (err) => {
@@ -228,15 +232,15 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
         });
       } else {
         if (mode === "item" && !giftUrl) {
-          toast.error("Gift URL is required in item mode");
+          toast.error(t("giftUrlRequired"));
           return;
         }
         if (mode === "collection" && !giftName) {
-          toast.error("Gift name is required in collection mode");
+          toast.error(t("giftNameRequired"));
           return;
         }
         if (!buyPrice) {
-          toast.error("Buy price is required");
+          toast.error(t("buyPriceRequired"));
           return;
         }
 
@@ -259,7 +263,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
         });
       }
     } catch {
-      toast.error("Invalid price value");
+      toast.error(t("invalidPrice"));
     }
   };
 
@@ -269,7 +273,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Mode toggle (add only) */}
       {!isEdit && (
-        <div className="flex gap-1 rounded-md border p-1" role="radiogroup" aria-label="Trade mode">
+        <div className="flex gap-1 rounded-md border p-1" role="radiogroup" aria-label={t("tradeMode")}>
           <button
             type="button"
             role="radio"
@@ -280,7 +284,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
             )}
             onClick={() => setMode("item")}
           >
-            Item
+            {t("modeItem")}
           </button>
           <button
             type="button"
@@ -292,7 +296,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
             )}
             onClick={() => setMode("collection")}
           >
-            Collection
+            {t("modeCollection")}
           </button>
         </div>
       )}
@@ -300,7 +304,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
       {/* Gift URL (item mode) */}
       {!isEdit && mode === "item" && (
         <div className="space-y-2">
-          <Label htmlFor="giftUrl">Gift URL *</Label>
+          <Label htmlFor="giftUrl">{t("giftUrl")} *</Label>
           <Input
             id="giftUrl"
             placeholder="https://t.me/nft/EasterEgg-52095"
@@ -330,7 +334,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
       {/* Gift Name (collection mode) */}
       {!isEdit && mode === "collection" && (
         <div className="space-y-2">
-          <Label htmlFor="gift-name-combobox">Gift Name *</Label>
+          <Label htmlFor="gift-name-combobox">{t("giftName")} *</Label>
           <GiftNameCombobox id="gift-name-combobox" value={giftName} onValueChange={setGiftName} />
         </div>
       )}
@@ -339,7 +343,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
       {!isEdit && (
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label>Currency</Label>
+            <Label>{t("currency")}</Label>
             <Select value={currency} onValueChange={(v) => { if (v === "STARS" || v === "TON") setCurrency(v); }}>
               <SelectTrigger>
                 <SelectValue />
@@ -351,7 +355,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="quantity">Quantity</Label>
+            <Label htmlFor="quantity">{t("quantity")}</Label>
             <Input
               id="quantity"
               type="text"
@@ -381,12 +385,12 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
       {/* Transferred count (shown when quantity > 1) */}
       {parseInt(quantity, 10) > 1 && (
         <div className="space-y-2">
-          <Label htmlFor="transferredCount">Transferred Count</Label>
+          <Label htmlFor="transferredCount">{t("transferredCount")}</Label>
           <Input
             id="transferredCount"
             type="text"
             inputMode="numeric"
-            placeholder={`Same as quantity (${quantity})`}
+            placeholder={t("transferredCountPlaceholder", { qty: quantity })}
             value={transferredCount}
             onChange={(e) => {
               const val = e.target.value.replace(/[^0-9]/g, "");
@@ -397,7 +401,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
             }}
           />
           <p className="text-xs text-muted-foreground">
-            How many items were transferred (flat commission × this count). Leave empty = same as quantity.
+            {t("transferredCountHint")}
           </p>
         </div>
       )}
@@ -405,7 +409,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
       {/* Buy section */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label htmlFor="buyPrice">Buy Price{!isEdit && " *"}</Label>
+          <Label htmlFor="buyPrice">{t("buyPrice")}{!isEdit && " *"}</Label>
           <Input
             id="buyPrice"
             type="text"
@@ -418,7 +422,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
           />
         </div>
         <div className="space-y-2">
-          <Label>Buy Date{!isEdit && " *"}</Label>
+          <Label>{t("buyDate")}{!isEdit && " *"}</Label>
           <DatePicker date={buyDate} onSelect={(d) => d && setBuyDate(d)} disabled={isEdit} />
         </div>
       </div>
@@ -426,10 +430,10 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
       {/* Buy marketplace */}
       {!isEdit && (
         <div className="space-y-2">
-          <Label>Buy Marketplace</Label>
+          <Label>{t("buyMarketplace")}</Label>
           <Select value={buyMarketplace} onValueChange={(v) => { if (MARKETPLACES.some((m) => m.value === v)) setBuyMarketplace(v as Marketplace); }}>
             <SelectTrigger>
-              <SelectValue placeholder="Select..." />
+              <SelectValue placeholder={t("selectPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {MARKETPLACES.map((m) => (
@@ -445,7 +449,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
       {/* Sell section */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label htmlFor="sellPrice">Sell Price</Label>
+          <Label htmlFor="sellPrice">{t("sellPrice")}</Label>
           <Input
             id="sellPrice"
             type="text"
@@ -456,7 +460,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
           />
         </div>
         <div className="space-y-2">
-          <Label>Sell Date</Label>
+          <Label>{t("sellDate")}</Label>
           <DatePicker date={sellDate} onSelect={setSellDate} />
         </div>
       </div>
@@ -464,10 +468,10 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
       {/* Sell marketplace */}
       {(sellPrice || sellDate) && (
         <div className="space-y-2">
-          <Label>Sell Marketplace</Label>
+          <Label>{t("sellMarketplace")}</Label>
           <Select value={sellMarketplace} onValueChange={(v) => { if (MARKETPLACES.some((m) => m.value === v)) setSellMarketplace(v as Marketplace); }}>
             <SelectTrigger>
-              <SelectValue placeholder="Select..." />
+              <SelectValue placeholder={t("selectPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {MARKETPLACES.map((m) => (
@@ -492,10 +496,10 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
 
       {/* Notes */}
       <div className="space-y-2">
-        <Label htmlFor="notes">Notes</Label>
+        <Label htmlFor="notes">{t("notes")}</Label>
         <Input
           id="notes"
-          placeholder="Optional notes..."
+          placeholder={t("notesPlaceholder")}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           maxLength={1000}
@@ -510,12 +514,12 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
           onCheckedChange={(checked) => setExcludeFromPnl(checked === true)}
         />
         <Label htmlFor="excludePnl" className="text-sm font-normal">
-          Don&apos;t count in PnL stats
+          {t("excludeFromPnl")}
         </Label>
       </div>
 
       <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? "Saving..." : isEdit ? "Update" : "Add trade"}
+        {isPending ? tc("saving") : isEdit ? t("update") : t("addTrade")}
       </Button>
     </form>
   );
@@ -529,6 +533,7 @@ interface DatePickerProps {
 
 function DatePicker({ date, onSelect, disabled }: DatePickerProps): React.ReactElement {
   const [open, setOpen] = useState(false);
+  const t = useTranslations("trades");
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -542,7 +547,7 @@ function DatePicker({ date, onSelect, disabled }: DatePickerProps): React.ReactE
           disabled={disabled}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "dd.MM.yy") : "Pick date"}
+          {date ? format(date, "dd.MM.yy") : t("pickDate")}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">

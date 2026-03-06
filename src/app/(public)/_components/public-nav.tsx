@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { navItems } from "@/lib/nav-items";
 
 export function PublicNav({ mobile = false }: { mobile?: boolean }): React.ReactElement {
   const pathname = usePathname();
+  const tNav = useTranslations("nav");
 
   if (mobile) {
     return (
@@ -25,7 +27,7 @@ export function PublicNav({ mobile = false }: { mobile?: boolean }): React.React
             )}
           >
             <item.icon className="h-5 w-5" />
-            {item.label}
+            {tNav(item.labelKey)}
           </Link>
         ))}
       </div>
@@ -48,7 +50,7 @@ export function PublicNav({ mobile = false }: { mobile?: boolean }): React.React
           )}
         >
           <item.icon className="h-4 w-4" />
-          {item.label}
+          {tNav(item.labelKey)}
         </Link>
       ))}
     </div>

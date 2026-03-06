@@ -10,8 +10,10 @@ import {
   createColumnHelper,
   type SortingState,
   type Column,
+  type ColumnDef,
 } from "@tanstack/react-table";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { ArrowUpDown, ArrowUp, ArrowDown, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -32,62 +34,67 @@ interface MarketTableProps {
 
 const col = createColumnHelper<GiftBubbleItem>();
 
-const columns = [
-  col.display({
-    id: "image",
-    header: "",
-    cell: ({ row }) => {
-      const name = row.original.name;
-      const src = getCollectionImageUrl(name);
-      return (
-        <Image
-          src={src}
-          alt={name}
-          width={32}
-          height={32}
-          className="rounded-md object-cover"
-          unoptimized
-        />
-      );
-    },
-    size: 40,
-    enableSorting: false,
-  }),
-  col.accessor("name", {
-    header: "Gift",
-    cell: ({ getValue }) => (
-      <span className="font-medium">{getValue()}</span>
-    ),
-  }),
-  col.accessor("floorprice", {
-    header: ({ column }) => <SortHeader label="Floor" column={column} />,
-    cell: ({ getValue }) => (
-      <span className="tabular-nums">{getValue().toFixed(1)} TON</span>
-    ),
-  }),
-  col.accessor("floorprice_usd", {
-    header: ({ column }) => <SortHeader label="USD" column={column} />,
-    cell: ({ getValue }) => (
-      <span className="tabular-nums text-muted-foreground">${getValue().toFixed(2)}</span>
-    ),
-  }),
-  col.accessor("change", {
-    header: ({ column }) => <SortHeader label="24h" column={column} />,
-    cell: ({ getValue }) => <ChangeCell value={getValue()} />,
-  }),
-  col.accessor("change_7d", {
-    header: ({ column }) => <SortHeader label="7d" column={column} />,
-    cell: ({ getValue }) => <ChangeCell value={getValue()} />,
-  }),
-  col.accessor("volume", {
-    header: ({ column }) => <SortHeader label="Listings" column={column} />,
-    cell: ({ getValue }) => (
-      <span className="tabular-nums text-muted-foreground">{getValue()}</span>
-    ),
-  }),
-];
+function useMarketColumns(): ColumnDef<GiftBubbleItem>[] {
+  const t = useTranslations("market");
+  return useMemo(() => [
+    col.display({
+      id: "image",
+      header: "",
+      cell: ({ row }) => {
+        const name = row.original.name;
+        const src = getCollectionImageUrl(name);
+        return (
+          <Image
+            src={src}
+            alt={name}
+            width={32}
+            height={32}
+            className="rounded-md object-cover"
+            unoptimized
+          />
+        );
+      },
+      size: 40,
+      enableSorting: false,
+    }),
+    col.accessor("name", {
+      header: t("columnGift"),
+      cell: ({ getValue }) => (
+        <span className="font-medium">{getValue()}</span>
+      ),
+    }),
+    col.accessor("floorprice", {
+      header: ({ column }) => <SortHeader label={t("columnFloor")} column={column} />,
+      cell: ({ getValue }) => (
+        <span className="tabular-nums">{getValue().toFixed(1)} TON</span>
+      ),
+    }),
+    col.accessor("floorprice_usd", {
+      header: ({ column }) => <SortHeader label={t("columnUsd")} column={column} />,
+      cell: ({ getValue }) => (
+        <span className="tabular-nums text-muted-foreground">${getValue().toFixed(2)}</span>
+      ),
+    }),
+    col.accessor("change", {
+      header: ({ column }) => <SortHeader label={t("column24h")} column={column} />,
+      cell: ({ getValue }) => <ChangeCell value={getValue()} />,
+    }),
+    col.accessor("change_7d", {
+      header: ({ column }) => <SortHeader label={t("column7d")} column={column} />,
+      cell: ({ getValue }) => <ChangeCell value={getValue()} />,
+    }),
+    col.accessor("volume", {
+      header: ({ column }) => <SortHeader label={t("columnListings")} column={column} />,
+      cell: ({ getValue }) => (
+        <span className="tabular-nums text-muted-foreground">{getValue()}</span>
+      ),
+    }),
+  ] as ColumnDef<GiftBubbleItem>[], [t]);
+}
 
 export function MarketTable({ items, available }: MarketTableProps): React.ReactElement {
+  const t = useTranslations("market");
+  const columns = useMarketColumns();
   const [sorting, setSorting] = useState<SortingState>([
     { id: "floorprice", desc: true },
   ]);
@@ -110,7 +117,7 @@ export function MarketTable({ items, available }: MarketTableProps): React.React
   if (!available) {
     return (
       <div className="flex h-48 items-center justify-center rounded-md border border-border text-sm text-muted-foreground">
-        Market data is temporarily unavailable. Please try again later.
+        {t("unavailable")}
       </div>
     );
   }
@@ -120,8 +127,8 @@ export function MarketTable({ items, available }: MarketTableProps): React.React
       <div className="relative max-w-xs">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
-          aria-label="Search gift collections"
-          placeholder="Search gifts..."
+          aria-label={t("searchGifts")}
+          placeholder={t("searchPlaceholder")}
           value={globalFilter}
           onChange={(e) => setGlobalFilter(e.target.value)}
           className="pl-8"
@@ -147,7 +154,7 @@ export function MarketTable({ items, available }: MarketTableProps): React.React
             {table.getRowModel().rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                  No results.
+                  {t("noResults")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -166,7 +173,7 @@ export function MarketTable({ items, available }: MarketTableProps): React.React
       </div>
 
       <p className="text-xs text-muted-foreground">
-        {table.getFilteredRowModel().rows.length} of {items.length} collections
+        {t("filteredOf", { filtered: table.getFilteredRowModel().rows.length, total: items.length })}
       </p>
     </div>
   );

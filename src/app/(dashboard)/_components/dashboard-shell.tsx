@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 import { LogOut, Gift, Sun, Moon } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,8 @@ interface DashboardShellProps {
 export function DashboardShell({ user, children }: DashboardShellProps): React.ReactElement {
   const pathname = usePathname();
   const { resolvedTheme, setTheme } = useTheme();
+  const tNav = useTranslations("nav");
+  const tCommon = useTranslations("common");
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -27,9 +30,9 @@ export function DashboardShell({ user, children }: DashboardShellProps): React.R
           <div className="flex items-center gap-6">
             <Link href="/trades" className="flex items-center gap-2 font-semibold">
               <Gift className="h-5 w-5 text-primary" />
-              <span>Giftfolio</span>
+              <span>{tCommon("appName")}</span>
             </Link>
-            <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
+            <nav className="hidden items-center gap-1 md:flex" aria-label={tNav("mainNav")}>
               {navItems.map((item) => (
                 <Link
                   key={item.href}
@@ -44,7 +47,7 @@ export function DashboardShell({ user, children }: DashboardShellProps): React.R
                   )}
                 >
                   <item.icon className="h-4 w-4" />
-                  {item.label}
+                  {tNav(item.labelKey)}
                 </Link>
               ))}
             </nav>
@@ -56,7 +59,7 @@ export function DashboardShell({ user, children }: DashboardShellProps): React.R
             {user.image && (
               <Image
                 src={user.image}
-                alt={user.name ?? "User avatar"}
+                alt={user.name ?? tCommon("userAvatar")}
                 width={32}
                 height={32}
                 className="rounded-full"
@@ -68,7 +71,7 @@ export function DashboardShell({ user, children }: DashboardShellProps): React.R
               size="icon"
               className="relative h-8 w-8 min-h-[44px] min-w-[44px] overflow-hidden"
               onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-              aria-label="Toggle theme"
+              aria-label={tNav("toggleTheme")}
             >
               <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
@@ -78,7 +81,7 @@ export function DashboardShell({ user, children }: DashboardShellProps): React.R
               size="icon"
               className="h-8 w-8 min-h-[44px] min-w-[44px]"
               onClick={() => void authClient.signOut()}
-              aria-label="Sign out"
+              aria-label={tNav("signOut")}
             >
               <LogOut className="h-4 w-4" />
             </Button>
@@ -92,7 +95,7 @@ export function DashboardShell({ user, children }: DashboardShellProps): React.R
       </main>
 
       {/* Mobile bottom nav — safe-area for iPhone notch */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)] md:hidden" aria-label="Mobile navigation">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)] md:hidden" aria-label={tNav("mobileNav")}>
         <div className="flex h-14 items-center justify-around">
           {navItems.map((item) => (
             <Link
@@ -107,7 +110,7 @@ export function DashboardShell({ user, children }: DashboardShellProps): React.R
               )}
             >
               <item.icon className="h-5 w-5" />
-              {item.label}
+              {tNav(item.labelKey)}
             </Link>
           ))}
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,8 @@ import { trpc } from "@/lib/trpc/client";
 export default function SettingsPage(): React.ReactElement {
   const { data: settings, isLoading } = trpc.settings.get.useQuery();
   const utils = trpc.useUtils();
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
 
   const [commissionStars, setCommissionStars] = useState("");
   const [commissionPermille, setCommissionPermille] = useState("");
@@ -45,7 +48,7 @@ export default function SettingsPage(): React.ReactElement {
   const updateSettings = trpc.settings.update.useMutation({
     onSuccess: (_data, variables) => {
       void utils.settings.get.invalidate();
-      toast.success("Settings saved");
+      toast.success(t("settingsSaved"));
       // Sync locale cookie for next-intl (server reads it on next request)
       if (variables.locale) {
         const current = document.cookie.match(/(?:^|; )locale=([^;]*)/)?.[1];
@@ -63,7 +66,7 @@ export default function SettingsPage(): React.ReactElement {
   const updateWalletAddress = trpc.settings.updateWalletAddress.useMutation({
     onSuccess: () => {
       void utils.settings.get.invalidate();
-      toast.success("Wallet address saved");
+      toast.success(t("walletSaved"));
     },
     onError: (err) => {
       toast.error(err.message);
@@ -87,7 +90,7 @@ export default function SettingsPage(): React.ReactElement {
         locale,
       });
     } catch {
-      toast.error("Invalid commission value");
+      toast.error(t("invalidCommission"));
     }
   };
 
@@ -95,20 +98,20 @@ export default function SettingsPage(): React.ReactElement {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 pb-4">
-      <h1 className="text-2xl font-bold">Settings</h1>
+      <h1 className="text-2xl font-bold">{t("title")}</h1>
 
       {/* Commission */}
       <Card>
         <CardHeader>
-          <CardTitle>Default Commission</CardTitle>
+          <CardTitle>{t("defaultCommission")}</CardTitle>
           <CardDescription>
-            Applied to new trades only. Existing trades are not affected.
+            {t("commissionDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="commissionStars">Flat fee (Stars)</Label>
+              <Label htmlFor="commissionStars">{t("flatFee")}</Label>
               <Input
                 id="commissionStars"
                 type="text"
@@ -119,7 +122,7 @@ export default function SettingsPage(): React.ReactElement {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="commissionPermille">Rate (permille)</Label>
+              <Label htmlFor="commissionPermille">{t("commRate")}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="commissionPermille"
@@ -146,13 +149,13 @@ export default function SettingsPage(): React.ReactElement {
       {/* Preferences */}
       <Card>
         <CardHeader>
-          <CardTitle>Preferences</CardTitle>
+          <CardTitle>{t("preferences")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Default Currency</Label>
+            <Label>{t("defaultCurrency")}</Label>
             <Select value={defaultCurrency} onValueChange={(v) => { if (v === "STARS" || v === "TON") setDefaultCurrency(v); }}>
-              <SelectTrigger aria-label="Default currency">
+              <SelectTrigger aria-label={t("defaultCurrency")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -163,7 +166,7 @@ export default function SettingsPage(): React.ReactElement {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="timezone">Timezone</Label>
+            <Label htmlFor="timezone">{t("timezone")}</Label>
             <div className="flex gap-2">
               <Input
                 id="timezone"
@@ -179,18 +182,18 @@ export default function SettingsPage(): React.ReactElement {
                 className="shrink-0 self-center"
                 onClick={() => setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone)}
               >
-                Detect
+                {tc("detect")}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Browser: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+              {t("browserTz", { tz: Intl.DateTimeFormat().resolvedOptions().timeZone })}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label>Language</Label>
+            <Label>{t("language")}</Label>
             <Select value={locale} onValueChange={(v) => { if (v === "en" || v === "ru" || v === "zh") setLocale(v); }}>
-              <SelectTrigger aria-label="Language">
+              <SelectTrigger aria-label={t("language")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -206,15 +209,14 @@ export default function SettingsPage(): React.ReactElement {
       {/* Stars→TON Rate */}
       <Card>
         <CardHeader>
-          <CardTitle>Stars → TON Rate</CardTitle>
+          <CardTitle>{t("starsToTonRate")}</CardTitle>
           <CardDescription>
-            How many Stars = 1 TON. Used to show combined PnL across currencies.
-            Leave empty to hide cross-currency totals.
+            {t("starsToTonRateDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="starsToTonRate">Stars per 1 TON</Label>
+            <Label htmlFor="starsToTonRate">{t("starsPerTon")}</Label>
             <div className="flex gap-2">
               <Input
                 id="starsToTonRate"
@@ -228,7 +230,7 @@ export default function SettingsPage(): React.ReactElement {
                   if (dotIdx !== -1) v = v.slice(0, dotIdx + 1) + v.slice(dotIdx + 1).replace(/\./g, "");
                   setStarsToTonRate(v);
                 }}
-                placeholder="e.g. 770 (check Fragment market)"
+                placeholder={t("starsPerTonPlaceholder")}
                 className="flex-1"
               />
               {starsToTonRate && (
@@ -239,13 +241,13 @@ export default function SettingsPage(): React.ReactElement {
                   className="shrink-0 self-center"
                   onClick={() => setStarsToTonRate("")}
                 >
-                  Clear
+                  {tc("clear")}
                 </Button>
               )}
             </div>
             {starsToTonRate && parseFloat(starsToTonRate) > 0 && (
               <p className="text-xs text-muted-foreground">
-                1 ★ ≈ {(1 / parseFloat(starsToTonRate)).toFixed(6)} TON
+                {t("oneStarApprox", { value: (1 / parseFloat(starsToTonRate)).toFixed(6) })}
               </p>
             )}
           </div>
@@ -255,20 +257,20 @@ export default function SettingsPage(): React.ReactElement {
       {/* TON Wallet */}
       <Card>
         <CardHeader>
-          <CardTitle>TON Wallet</CardTitle>
+          <CardTitle>{t("tonWallet")}</CardTitle>
           <CardDescription>
-            Link your TON wallet to auto-import gift trades from your on-chain history.
+            {t("tonWalletDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="walletAddress">Wallet Address</Label>
+            <Label htmlFor="walletAddress">{t("walletAddress")}</Label>
             <div className="flex gap-2">
               <Input
                 id="walletAddress"
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
-                placeholder="UQA... or EQ..."
+                placeholder={t("walletPlaceholder")}
                 className="flex-1 font-mono text-sm"
               />
               {walletAddress && (
@@ -279,12 +281,12 @@ export default function SettingsPage(): React.ReactElement {
                   className="shrink-0 self-center"
                   onClick={() => setWalletAddress("")}
                 >
-                  Clear
+                  {tc("clear")}
                 </Button>
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Supports TON friendly address format (UQ…, EQ…, 0:…)
+              {t("walletHint")}
             </p>
           </div>
           <Button
@@ -292,7 +294,7 @@ export default function SettingsPage(): React.ReactElement {
             disabled={updateWalletAddress.isPending}
             variant="secondary"
           >
-            {updateWalletAddress.isPending ? "Saving..." : "Save wallet address"}
+            {updateWalletAddress.isPending ? t("savingWallet") : t("saveWallet")}
           </Button>
         </CardContent>
       </Card>
@@ -302,7 +304,7 @@ export default function SettingsPage(): React.ReactElement {
         disabled={updateSettings.isPending}
         className="w-full"
       >
-        {updateSettings.isPending ? "Saving..." : "Save settings"}
+        {updateSettings.isPending ? tc("saving") : t("saveSettings")}
       </Button>
     </div>
   );

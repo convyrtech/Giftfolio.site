@@ -1,20 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { trpc } from "@/lib/trpc/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-const PERIODS = [
-  { value: "week", label: "Week" },
-  { value: "month", label: "Month" },
-  { value: "total", label: "All Time" },
-] as const;
-
-type Period = (typeof PERIODS)[number]["value"];
+const PERIOD_VALUES = ["week", "month", "total"] as const;
+type Period = (typeof PERIOD_VALUES)[number];
 
 export function TradeOutcomesCard(): React.ReactElement {
   const [period, setPeriod] = useState<Period>("total");
+  const t = useTranslations("analytics");
 
   const { data, isLoading } = trpc.analytics.tradeOutcomes.useQuery(
     { period },
@@ -24,22 +21,22 @@ export function TradeOutcomesCard(): React.ReactElement {
   return (
     <div className="rounded-lg border p-4">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-medium">Trade Outcomes</h3>
-        <div className="flex gap-1 rounded-md border p-0.5" role="group" aria-label="Outcomes period">
-          {PERIODS.map((p) => (
+        <h3 className="text-sm font-medium">{t("tradeOutcomes")}</h3>
+        <div className="flex gap-1 rounded-md border p-0.5" role="group" aria-label={t("outcomesPeriod")}>
+          {PERIOD_VALUES.map((pv) => (
             <button
-              key={p.value}
+              key={pv}
               type="button"
-              aria-pressed={period === p.value}
+              aria-pressed={period === pv}
               className={cn(
                 "rounded px-2 py-1 text-xs font-medium transition-colors",
-                period === p.value
+                period === pv
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground",
               )}
-              onClick={() => setPeriod(p.value)}
+              onClick={() => setPeriod(pv)}
             >
-              {p.label}
+              {pv === "week" ? t("weekPeriod") : pv === "month" ? t("monthPeriod") : t("allTimePeriod")}
             </button>
           ))}
         </div>
@@ -53,7 +50,7 @@ export function TradeOutcomesCard(): React.ReactElement {
         </div>
       ) : !data || data.total === 0 ? (
         <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
-          No closed trades
+          {t("noClosedTrades")}
         </div>
       ) : (
         <div className="space-y-3">
@@ -62,14 +59,14 @@ export function TradeOutcomesCard(): React.ReactElement {
             <div className="text-3xl font-bold tabular-nums">
               {data.winRate !== null ? `${data.winRate}%` : "—"}
             </div>
-            <div className="text-xs text-muted-foreground">Win Rate</div>
+            <div className="text-xs text-muted-foreground">{t("winRate")}</div>
           </div>
 
           {/* Progress bar */}
           <div
             className="flex h-3 overflow-hidden rounded-full"
             role="img"
-            aria-label={`${data.wins} wins, ${data.breakeven} breakeven, ${data.losses} losses`}
+            aria-label={`${data.wins} ${t("wins")}, ${data.breakeven} ${t("even")}, ${data.losses} ${t("losses")}`}
           >
             {(() => {
               const winW = Math.round((data.wins / data.total) * 100);
@@ -95,15 +92,15 @@ export function TradeOutcomesCard(): React.ReactElement {
           <div className="flex justify-between text-xs">
             <span className="flex items-center gap-1.5">
               <div className="h-2 w-2 rounded-full bg-green-500" />
-              {data.wins} wins
+              {data.wins} {t("wins")}
             </span>
             <span className="flex items-center gap-1.5">
               <div className="h-2 w-2 rounded-full bg-muted-foreground/30" />
-              {data.breakeven} even
+              {data.breakeven} {t("even")}
             </span>
             <span className="flex items-center gap-1.5">
               <div className="h-2 w-2 rounded-full bg-red-500" />
-              {data.losses} losses
+              {data.losses} {t("losses")}
             </span>
           </div>
         </div>

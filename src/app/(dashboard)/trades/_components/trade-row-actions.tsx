@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { MoreHorizontal, Pencil, Trash2, Eye, EyeOff, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,28 +27,31 @@ export function TradeRowActions({
   onToggleHidden,
   onToggleExclude,
 }: TradeRowActionsProps): React.ReactElement {
+  const t = useTranslations("trades");
+  const tc = useTranslations("common");
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 min-h-[44px] min-w-[44px]" aria-label={`Actions for ${trade.giftName}`}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 min-h-[44px] min-w-[44px]" aria-label={t("actionsFor", { name: trade.giftName })}>
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={onEdit}>
           <Pencil className="mr-2 h-4 w-4" />
-          Edit
+          {t("edit")}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onToggleHidden}>
           {trade.isHidden ? (
-            <><Eye className="mr-2 h-4 w-4" />Unhide</>
+            <><Eye className="mr-2 h-4 w-4" />{t("unhide")}</>
           ) : (
-            <><EyeOff className="mr-2 h-4 w-4" />Hide</>
+            <><EyeOff className="mr-2 h-4 w-4" />{t("hide")}</>
           )}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onToggleExclude}>
           <BarChart3 className="mr-2 h-4 w-4" />
-          {trade.excludeFromPnl ? "Count in PnL" : "Don't count"}
+          {trade.excludeFromPnl ? t("countInPnl") : t("dontCount")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -55,7 +59,7 @@ export function TradeRowActions({
           className="text-destructive focus:text-destructive"
         >
           <Trash2 className="mr-2 h-4 w-4" />
-          Delete
+          {tc("delete")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

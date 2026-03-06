@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,8 @@ export function InlineCommissionCell({
   const [flatInput, setFlatInput] = useState("");
   const [permilleInput, setPermilleInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const t = useTranslations("trades");
+  const tc = useTranslations("common");
 
   function handleOpen(isOpen: boolean): void {
     if (isOpen) {
@@ -57,11 +60,11 @@ export function InlineCommissionCell({
       const parsedPermille = permilleInput.trim() === "" ? 0 : Number(permilleInput.trim());
 
       if (isNaN(parsedPermille) || parsedPermille < 0 || parsedPermille > 1000) {
-        toast.error("Permille must be between 0 and 1000");
+        toast.error(t("permilleRange"));
         return;
       }
       if (parsedFlat < 0n) {
-        toast.error("Flat commission cannot be negative");
+        toast.error(t("flatNonNegative"));
         return;
       }
 
@@ -85,7 +88,7 @@ export function InlineCommissionCell({
             saving && "opacity-50",
           )}
           disabled={saving}
-          aria-label="Edit commission"
+          aria-label={t("commissionOverride")}
         >
           <span className="tabular-nums text-muted-foreground">
             {formatCommission(flatStars, permille, currency)}
@@ -96,7 +99,7 @@ export function InlineCommissionCell({
         <div className="space-y-3">
           {currency === "STARS" && (
             <div className="space-y-1">
-              <Label htmlFor="comm-flat" className="text-xs">Flat (Stars)</Label>
+              <Label htmlFor="comm-flat" className="text-xs">{t("commFlat")}</Label>
               <Input
                 id="comm-flat"
                 type="text"
@@ -110,7 +113,7 @@ export function InlineCommissionCell({
             </div>
           )}
           <div className="space-y-1">
-            <Label htmlFor="comm-permille" className="text-xs">Rate (‰ permille)</Label>
+            <Label htmlFor="comm-permille" className="text-xs">{t("commRate")}</Label>
             <Input
               id="comm-permille"
               type="text"
@@ -128,7 +131,7 @@ export function InlineCommissionCell({
             disabled={saving}
             onClick={() => void handleSave()}
           >
-            {saving ? "Saving..." : "Save"}
+            {saving ? tc("saving") : tc("save")}
           </Button>
         </div>
       </PopoverContent>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Select,
   SelectContent,
@@ -31,6 +32,7 @@ export function InlineMarketplaceCell({
   onSave,
 }: InlineMarketplaceCellProps): React.ReactElement {
   const [saving, setSaving] = useState(false);
+  const t = useTranslations("trades");
 
   async function handleChange(newValue: string): Promise<void> {
     const marketplace: Marketplace | null =
@@ -60,7 +62,7 @@ export function InlineMarketplaceCell({
           saving && "opacity-50",
           !value && "text-muted-foreground",
         )}
-        aria-label="Select marketplace"
+        aria-label={t("selectPlaceholder")}
       >
         <SelectValue placeholder="—" />
       </SelectTrigger>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { trpc } from "@/lib/trpc/client";
 import { formatStars, type Stars } from "@/lib/currencies";
@@ -26,6 +27,7 @@ const chartConfig: ChartConfig = {
 };
 
 export function PortfolioDonutChart(): React.ReactElement {
+  const t = useTranslations("analytics");
   const { data, isLoading } = trpc.analytics.portfolioComposition.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
   });
@@ -46,14 +48,14 @@ export function PortfolioDonutChart(): React.ReactElement {
   return (
     <div className="rounded-lg border p-4">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-medium">Portfolio Composition</h3>
-        <span className="text-xs text-muted-foreground">Stars only</span>
+        <h3 className="text-sm font-medium">{t("portfolioComposition")}</h3>
+        <span className="text-xs text-muted-foreground">{t("starsOnly")}</span>
       </div>
       {isLoading ? (
         <Skeleton className="mx-auto h-[250px] w-[250px] rounded-full" />
       ) : starsData.length === 0 ? (
         <div className="flex h-[250px] items-center justify-center text-sm text-muted-foreground">
-          {tonCount > 0 ? "No open Stars positions" : "No open positions"}
+          {tonCount > 0 ? t("noOpenStars") : t("noOpenPositions")}
         </div>
       ) : (
         <div className="flex flex-col items-center gap-4 lg:flex-row">
@@ -101,7 +103,7 @@ export function PortfolioDonutChart(): React.ReactElement {
             ))}
             {tonCount > 0 && (
               <div className="mt-1 text-muted-foreground/60">
-                +{tonCount} TON position{tonCount > 1 ? "s" : ""} not shown
+                {t("tonNotShown")}
               </div>
             )}
           </div>

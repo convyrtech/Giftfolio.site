@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { X, Eye, EyeOff, BarChart3, Trash2, DollarSign, ShoppingCart, Calendar, Percent } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,8 @@ export function BulkActionsBar({
 }: BulkActionsBarProps): React.ReactElement | null {
   const utils = trpc.useUtils();
   const count = selectedIds.length;
+  const tb = useTranslations("bulk");
+  const tc = useTranslations("common");
 
   if (count === 0) return null;
 
@@ -43,10 +46,10 @@ export function BulkActionsBar({
   return (
     <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-50 border-t bg-background/95 p-3 backdrop-blur md:bottom-0 md:pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] supports-[backdrop-filter]:bg-background/60" role="region" aria-label="Bulk actions">
       <div className="mx-auto flex max-w-4xl items-center gap-2">
-        <span className="shrink-0 text-sm font-medium" role="status" aria-live="polite" aria-atomic="true">{count} selected</span>
+        <span className="shrink-0 text-sm font-medium" role="status" aria-live="polite" aria-atomic="true">{tb("selected", { count })}</span>
         <Button variant="ghost" size="sm" onClick={onClearSelection}>
           <X className="mr-1 h-3 w-3" />
-          Clear
+          {tc("clear")}
         </Button>
 
         <div className="ml-auto flex flex-wrap items-center gap-1">
@@ -75,10 +78,12 @@ function SetSellPriceAction({
   const [price, setPrice] = useState("");
   const [dateStr, setDateStr] = useState(() => todayUTC().toISOString().slice(0, 10));
   const [open, setOpen] = useState(false);
+  const tb = useTranslations("bulk");
+  const tc = useTranslations("common");
 
   const bulkUpdate = trpc.trades.bulkUpdate.useMutation({
     onSuccess: (data) => {
-      toast.success(`Updated ${data.count} trades`);
+      toast.success(tb("updatedCount", { count: data.count }));
       setOpen(false);
       setPrice("");
       onDone();
@@ -91,14 +96,14 @@ function SetSellPriceAction({
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm">
           <DollarSign className="mr-1 h-3 w-3" />
-          Sell price
+          {tb("sellPrice")}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-56" align="end">
         <div className="space-y-2">
           <Input
-            placeholder="Sell price"
-            aria-label="Sell price for selected trades"
+            placeholder={tb("sellPrice")}
+            aria-label={tb("sellPriceLabel")}
             type="text"
             inputMode="numeric"
             value={price}
@@ -107,7 +112,7 @@ function SetSellPriceAction({
           />
           <Input
             type="date"
-            aria-label="Sell date for selected trades"
+            aria-label={tb("sellDateLabel")}
             value={dateStr}
             onChange={(e) => setDateStr(e.target.value)}
           />
@@ -125,7 +130,7 @@ function SetSellPriceAction({
               });
             }}
           >
-            {bulkUpdate.isPending ? "Updating..." : "Apply"}
+            {bulkUpdate.isPending ? tc("updating") : tc("apply")}
           </Button>
         </div>
       </PopoverContent>
@@ -142,10 +147,12 @@ function SetBuyPriceAction({
 }): React.ReactElement {
   const [price, setPrice] = useState("");
   const [open, setOpen] = useState(false);
+  const tb = useTranslations("bulk");
+  const tc = useTranslations("common");
 
   const bulkUpdate = trpc.trades.bulkUpdate.useMutation({
     onSuccess: (data) => {
-      toast.success(`Updated ${data.count} trades`);
+      toast.success(tb("updatedCount", { count: data.count }));
       setOpen(false);
       setPrice("");
       onDone();
@@ -158,14 +165,14 @@ function SetBuyPriceAction({
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm">
           <ShoppingCart className="mr-1 h-3 w-3" />
-          Buy price
+          {tb("buyPrice")}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-56" align="end">
         <div className="space-y-2">
           <Input
-            placeholder="Buy price"
-            aria-label="Buy price for selected trades"
+            placeholder={tb("buyPrice")}
+            aria-label={tb("buyPriceLabel")}
             type="text"
             inputMode="numeric"
             value={price}
@@ -180,7 +187,7 @@ function SetBuyPriceAction({
               bulkUpdate.mutate({ ids, buyPrice: BigInt(price) });
             }}
           >
-            {bulkUpdate.isPending ? "Updating..." : "Apply"}
+            {bulkUpdate.isPending ? tc("updating") : tc("apply")}
           </Button>
         </div>
       </PopoverContent>
@@ -197,10 +204,12 @@ function SetBuyDateAction({
 }): React.ReactElement {
   const [dateStr, setDateStr] = useState("");
   const [open, setOpen] = useState(false);
+  const tb = useTranslations("bulk");
+  const tc = useTranslations("common");
 
   const bulkUpdate = trpc.trades.bulkUpdate.useMutation({
     onSuccess: (data) => {
-      toast.success(`Updated ${data.count} trades`);
+      toast.success(tb("updatedCount", { count: data.count }));
       setOpen(false);
       setDateStr("");
       onDone();
@@ -213,14 +222,14 @@ function SetBuyDateAction({
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm">
           <Calendar className="mr-1 h-3 w-3" />
-          Buy date
+          {tb("buyDate")}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-56" align="end">
         <div className="space-y-2">
           <Input
             type="date"
-            aria-label="Buy date for selected trades"
+            aria-label={tb("buyDateLabel")}
             value={dateStr}
             onChange={(e) => setDateStr(e.target.value)}
             autoFocus
@@ -235,7 +244,7 @@ function SetBuyDateAction({
               bulkUpdate.mutate({ ids, buyDate: new Date(Date.UTC(parts[0]!, parts[1]! - 1, parts[2]!)) });
             }}
           >
-            {bulkUpdate.isPending ? "Updating..." : "Apply"}
+            {bulkUpdate.isPending ? tc("updating") : tc("apply")}
           </Button>
         </div>
       </PopoverContent>
@@ -253,10 +262,13 @@ function SetCommissionAction({
   const [flatInput, setFlatInput] = useState("");
   const [permilleInput, setPermilleInput] = useState("");
   const [open, setOpen] = useState(false);
+  const tb = useTranslations("bulk");
+  const tc = useTranslations("common");
+  const tt = useTranslations("trades");
 
   const bulkUpdate = trpc.trades.bulkUpdate.useMutation({
     onSuccess: (data) => {
-      toast.success(`Updated ${data.count} trades`);
+      toast.success(tb("updatedCount", { count: data.count }));
       setOpen(false);
       setFlatInput("");
       setPermilleInput("");
@@ -272,13 +284,13 @@ function SetCommissionAction({
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm">
           <Percent className="mr-1 h-3 w-3" />
-          Commission
+          {tb("commission")}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-56" align="end">
         <div className="space-y-3">
           <div className="space-y-1">
-            <Label htmlFor="bulk-comm-flat" className="text-xs">Flat (Stars)</Label>
+            <Label htmlFor="bulk-comm-flat" className="text-xs">{tt("commFlat")}</Label>
             <Input
               id="bulk-comm-flat"
               type="text"
@@ -291,7 +303,7 @@ function SetCommissionAction({
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="bulk-comm-permille" className="text-xs">Rate (‰ permille)</Label>
+            <Label htmlFor="bulk-comm-permille" className="text-xs">{tt("commRate")}</Label>
             <Input
               id="bulk-comm-permille"
               type="text"
@@ -316,7 +328,7 @@ function SetCommissionAction({
               });
             }}
           >
-            {bulkUpdate.isPending ? "Updating..." : "Apply"}
+            {bulkUpdate.isPending ? tc("updating") : tc("apply")}
           </Button>
         </div>
       </PopoverContent>
@@ -333,9 +345,11 @@ function BulkHideAction({
   hide: boolean;
   onDone: () => void;
 }): React.ReactElement {
+  const tb = useTranslations("bulk");
+  const tt = useTranslations("trades");
   const bulkUpdate = trpc.trades.bulkUpdate.useMutation({
     onSuccess: (data) => {
-      toast.success(`${hide ? "Hidden" : "Unhidden"} ${data.count} trades`);
+      toast.success(hide ? tb("hiddenCount", { count: data.count }) : tb("unhiddenCount", { count: data.count }));
       onDone();
     },
     onError: (err) => toast.error(err.message),
@@ -349,9 +363,9 @@ function BulkHideAction({
       onClick={() => bulkUpdate.mutate({ ids, isHidden: hide })}
     >
       {hide ? (
-        <><EyeOff className="mr-1 h-3 w-3" />Hide</>
+        <><EyeOff className="mr-1 h-3 w-3" />{tt("hide")}</>
       ) : (
-        <><Eye className="mr-1 h-3 w-3" />Unhide</>
+        <><Eye className="mr-1 h-3 w-3" />{tt("unhide")}</>
       )}
     </Button>
   );
@@ -366,9 +380,11 @@ function BulkExcludeAction({
   exclude: boolean;
   onDone: () => void;
 }): React.ReactElement {
+  const tb = useTranslations("bulk");
+  const tt = useTranslations("trades");
   const bulkUpdate = trpc.trades.bulkUpdate.useMutation({
     onSuccess: (data) => {
-      toast.success(`${exclude ? "Excluded" : "Included"} ${data.count} trades from PnL`);
+      toast.success(exclude ? tb("excludedCount", { count: data.count }) : tb("includedCount", { count: data.count }));
       onDone();
     },
     onError: (err) => toast.error(err.message),
@@ -382,7 +398,7 @@ function BulkExcludeAction({
       onClick={() => bulkUpdate.mutate({ ids, excludeFromPnl: exclude })}
     >
       <BarChart3 className="mr-1 h-3 w-3" />
-      {exclude ? "Don't count" : "Count"}
+      {exclude ? tt("dontCount") : tb("count")}
     </Button>
   );
 }
@@ -394,9 +410,11 @@ function BulkDeleteAction({
   ids: bigint[];
   onDone: () => void;
 }): React.ReactElement {
+  const tb = useTranslations("bulk");
+  const tc = useTranslations("common");
   const bulkDelete = trpc.trades.bulkDelete.useMutation({
     onSuccess: (data) => {
-      toast.success(`Deleted ${data.count} trades`);
+      toast.success(tb("deletedCount", { count: data.count }));
       onDone();
     },
     onError: (err) => toast.error(err.message),
@@ -410,7 +428,7 @@ function BulkDeleteAction({
       onClick={() => bulkDelete.mutate({ ids })}
     >
       <Trash2 className="mr-1 h-3 w-3" />
-      Delete
+      {tc("delete")}
     </Button>
   );
 }

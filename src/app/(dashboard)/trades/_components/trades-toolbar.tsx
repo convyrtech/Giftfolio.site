@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Download, Upload, Plus, Eye, EyeOff, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,6 +56,8 @@ export function TradesToolbar({
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showWalletImport, setShowWalletImport] = useState(false);
+  const t = useTranslations("trades");
+  const tc = useTranslations("common");
 
   const { data: settings } = trpc.settings.get.useQuery();
 
@@ -63,57 +66,57 @@ export function TradesToolbar({
       <div className="flex flex-wrap items-center gap-2">
         <Button onClick={() => setShowForm(true)} size="sm">
           <Plus className="mr-1 h-4 w-4" />
-          Add trade
+          {t("addTrade")}
         </Button>
 
         <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
           <Upload className="mr-1 h-4 w-4" />
-          Import
+          {tc("import")}
         </Button>
 
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="outline" size="sm" onClick={() => setShowWalletImport(true)}>
               <Wallet className="mr-1 h-4 w-4" />
-              Wallet
+              {t("wallet")}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Import trades from TON wallet</TooltipContent>
+          <TooltipContent>{t("walletTooltip")}</TooltipContent>
         </Tooltip>
 
         <div className="h-5 w-px bg-border" />
 
         <Select value={currency} onValueChange={(v) => { if ((currencyFilters as readonly string[]).includes(v)) onCurrencyChange(v as CurrencyFilter); }}>
-          <SelectTrigger className="w-28" aria-label="Filter by currency">
-            <SelectValue placeholder="Currency" />
+          <SelectTrigger className="w-28" aria-label={t("filterCurrency")}>
+            <SelectValue placeholder={t("currency")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="all">{t("currencyAll")}</SelectItem>
             <SelectItem value="TON">TON</SelectItem>
             <SelectItem value="STARS">Stars</SelectItem>
           </SelectContent>
         </Select>
 
         <Select value={sort} onValueChange={(v) => { if ((sortColumns as readonly string[]).includes(v)) onSortChange(v as SortColumn); }}>
-          <SelectTrigger className="w-32" aria-label="Sort by column">
-            <SelectValue placeholder="Sort by" />
+          <SelectTrigger className="w-32" aria-label={t("sortBy")}>
+            <SelectValue placeholder={t("sortBy")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="buy_date">Buy Date</SelectItem>
-            <SelectItem value="sell_date">Sell Date</SelectItem>
-            <SelectItem value="buy_price">Buy Price</SelectItem>
-            <SelectItem value="sell_price">Sell Price</SelectItem>
-            <SelectItem value="created_at">Created</SelectItem>
+            <SelectItem value="buy_date">{t("sortBuyDate")}</SelectItem>
+            <SelectItem value="sell_date">{t("sortSellDate")}</SelectItem>
+            <SelectItem value="buy_price">{t("sortBuyPrice")}</SelectItem>
+            <SelectItem value="sell_price">{t("sortSellPrice")}</SelectItem>
+            <SelectItem value="created_at">{t("sortCreated")}</SelectItem>
           </SelectContent>
         </Select>
 
         <Select value={sortDir} onValueChange={(v) => { if ((sortDirs as readonly string[]).includes(v)) onSortDirChange(v as SortDir); }}>
-          <SelectTrigger className="w-28" aria-label="Sort direction">
+          <SelectTrigger className="w-28" aria-label={t("sortDirection")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="desc">Newest</SelectItem>
-            <SelectItem value="asc">Oldest</SelectItem>
+            <SelectItem value="desc">{t("sortNewest")}</SelectItem>
+            <SelectItem value="asc">{t("sortOldest")}</SelectItem>
           </SelectContent>
         </Select>
 
@@ -123,7 +126,7 @@ export function TradesToolbar({
               variant={showHidden ? "secondary" : "outline"}
               size="sm"
               onClick={() => onShowHiddenChange(!showHidden)}
-              aria-label={showHidden ? "Hide hidden trades" : "Show hidden trades"}
+              aria-label={showHidden ? t("hideHidden") : t("showHidden")}
               aria-pressed={showHidden ? "true" : "false"}
             >
               {showHidden ? (
@@ -134,7 +137,7 @@ export function TradesToolbar({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            {showHidden ? "Showing hidden trades" : "Hidden trades not shown"}
+            {showHidden ? t("showingHidden") : t("hiddenNotShown")}
           </TooltipContent>
         </Tooltip>
 

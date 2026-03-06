@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
 export default function RootError({
@@ -9,17 +10,19 @@ export default function RootError({
   error: Error & { digest?: string };
   reset: () => void;
 }): React.ReactElement {
+  const t = useTranslations("error");
+
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4">
-      <h2 className="text-lg font-semibold">Something went wrong</h2>
+      <h2 className="text-lg font-semibold">{t("title")}</h2>
       <p className="max-w-md text-center text-sm text-muted-foreground">
-        An unexpected error occurred. Please try again.
+        {t("description")}
       </p>
       {error.digest && (
-        <p className="text-xs text-muted-foreground">Error ID: {error.digest}</p>
+        <p className="text-xs text-muted-foreground">{t("errorId", { digest: error.digest })}</p>
       )}
       <Button onClick={reset} variant="outline">
-        Try again
+        {t("tryAgain")}
       </Button>
     </div>
   );

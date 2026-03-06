@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 const RANGES = [
@@ -18,8 +19,9 @@ interface ChartPeriodSelectorProps {
 }
 
 export function ChartPeriodSelector({ value, onChange }: ChartPeriodSelectorProps): React.ReactElement {
+  const t = useTranslations("analytics");
   return (
-    <div className="flex gap-1 rounded-md border p-0.5" role="group" aria-label="Chart period">
+    <div className="flex gap-1 rounded-md border p-0.5" role="group" aria-label={t("chartPeriod")}>
       {RANGES.map((r) => (
         <button
           key={r.value}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -11,6 +12,7 @@ export function EmptyState(): React.ReactElement {
   const searchParams = useSearchParams();
   const isOnboarding = searchParams.get("onboarding") === "1";
   const [showForm, setShowForm] = useState(isOnboarding);
+  const t = useTranslations("trades");
 
   return (
     <>
@@ -19,17 +21,17 @@ export function EmptyState(): React.ReactElement {
           <Gift className="h-10 w-10 text-muted-foreground/60" />
         </div>
         <div className="text-center">
-          <h3 className="text-lg font-medium">No trades yet</h3>
+          <h3 className="text-lg font-medium">{t("emptyTitle")}</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Add your first trade to start tracking profit
+            {t("emptyDesc")}
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)}>Add trade</Button>
+        <Button onClick={() => setShowForm(true)}>{t("addTrade")}</Button>
         <Link
           href="/settings"
           className="text-xs text-muted-foreground hover:underline"
         >
-          Set up commission first
+          {t("setupCommission")}
         </Link>
       </div>
 

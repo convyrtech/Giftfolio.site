@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useId } from "react";
+import { useTranslations } from "next-intl";
 import {
   Area,
   AreaChart,
@@ -47,6 +48,7 @@ export function PnlAreaChart(): React.ReactElement {
   const [range, setRange] = useState<Range>("30d");
   const [currency, setCurrency] = useState<Currency>("TON");
   const gradientId = useId().replace(/:/g, "");
+  const t = useTranslations("analytics");
 
   const { data, isLoading } = trpc.analytics.pnlTimeSeries.useQuery(
     {
@@ -74,10 +76,10 @@ export function PnlAreaChart(): React.ReactElement {
   return (
     <div className="rounded-lg border p-4">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-medium">Cumulative PnL</h3>
+        <h3 className="text-sm font-medium">{t("cumulativePnl")}</h3>
         <div className="flex items-center gap-2">
           {/* Currency toggle */}
-          <div className="flex gap-1 rounded-md border p-0.5" role="group" aria-label="Currency">
+          <div className="flex gap-1 rounded-md border p-0.5" role="group" aria-label={t("currencyLabel")}>
             {CURRENCIES.map((c) => (
               <button
                 key={c.value}
@@ -102,7 +104,7 @@ export function PnlAreaChart(): React.ReactElement {
         <Skeleton className="h-[250px] w-full" />
       ) : chartData.length === 0 ? (
         <div className="flex h-[250px] items-center justify-center text-sm text-muted-foreground">
-          No closed trades in this period
+          {t("noClosedTrades")}
         </div>
       ) : (
         <ChartContainer config={chartConfig} className="h-[250px] w-full">
