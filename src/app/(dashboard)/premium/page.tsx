@@ -7,9 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 const tiers = [
-  { key: "free", featured: false, current: true },
-  { key: "starter", featured: false, current: false },
-  { key: "pro", featured: true, current: false },
+  { key: "free", featureCount: 3, featured: false, current: true },
+  { key: "starter", featureCount: 4, featured: false, current: false },
+  { key: "pro", featureCount: 4, featured: true, current: false },
 ] as const;
 
 export default function PremiumPage(): React.ReactElement {
@@ -30,45 +30,45 @@ export default function PremiumPage(): React.ReactElement {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-3">
-        {tiers.map((tier) => {
-          const features = t(`${tier.key}Features`).split(", ");
-          return (
-            <Card
-              key={tier.key}
-              className={tier.featured ? "border-primary ring-1 ring-primary" : ""}
-            >
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>{t(tier.key)}</CardTitle>
-                  {tier.featured && (
-                    <Badge variant="default">{t("popular")}</Badge>
-                  )}
-                </div>
-                <CardDescription>{t(`${tier.key}Desc`)}</CardDescription>
-                {tier.key !== "free" && (
-                  <p className="text-2xl font-bold">{t(`${tier.key}Price`)}</p>
+        {tiers.map((tier) => (
+          <Card
+            key={tier.key}
+            className={tier.featured ? "border-primary ring-1 ring-primary" : ""}
+          >
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>{t(tier.key)}</CardTitle>
+                {tier.featured && (
+                  <Badge variant="default">{t("popular")}</Badge>
                 )}
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <ul className="space-y-2 text-sm">
-                  {features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2">
+              </div>
+              <CardDescription>{t(`${tier.key}Desc`)}</CardDescription>
+              {tier.key !== "free" && (
+                <p className="text-2xl font-bold">{t(`${tier.key}Price`)}</p>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <ul className="space-y-2 text-sm">
+                {Array.from({ length: tier.featureCount }, (_, i) => {
+                  const featureKey = `${tier.key}Feature${i + 1}`;
+                  return (
+                    <li key={featureKey} className="flex items-start gap-2">
                       <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                      <span>{feature}</span>
+                      <span>{t(featureKey)}</span>
                     </li>
-                  ))}
-                </ul>
-                <Button
-                  variant={tier.current ? "outline" : "default"}
-                  className="w-full"
-                  disabled
-                >
-                  {tier.current ? t("currentPlan") : t("comingSoon")}
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
+                  );
+                })}
+              </ul>
+              <Button
+                variant={tier.current ? "outline" : "default"}
+                className="w-full"
+                disabled
+              >
+                {tier.current ? t("currentPlan") : t("comingSoon")}
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   );

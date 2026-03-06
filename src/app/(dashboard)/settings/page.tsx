@@ -22,6 +22,16 @@ import { trpc } from "@/lib/trpc/client";
 const profileTypes = ["flip", "invest"] as const;
 type ProfileType = (typeof profileTypes)[number];
 
+const validMarketplaces = ["fragment", "getgems", "tonkeeper", "p2p", "other"] as const;
+type Marketplace = (typeof validMarketplaces)[number];
+
+function validateMarketplace(value: unknown): Marketplace | null {
+  if (typeof value === "string" && validMarketplaces.includes(value as Marketplace)) {
+    return value as Marketplace;
+  }
+  return null;
+}
+
 export default function SettingsPage(): React.ReactElement {
   const { data: settings, isLoading } = trpc.settings.get.useQuery();
   const utils = trpc.useUtils();
@@ -105,28 +115,67 @@ export default function SettingsPage(): React.ReactElement {
     }
   };
 
-  const handleExport = (): void => {
-    const data = {
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      settings: settings ? {
-        defaultCommissionStars: String(settings.defaultCommissionStars),
-        defaultCommissionPermille: settings.defaultCommissionPermille,
-        defaultCurrency: settings.defaultCurrency,
-        timezone: settings.timezone,
-        starsToTonRate: settings.starsToTonRate,
-        locale: settings.locale,
-        profileType: settings.profileType,
-      } : null,
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `giftfolio-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(t("configExportSuccess"));
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+
+  const bulkImport = trpc.trades.bulkImport.useMutation({
+    onSuccess: (result) => {
+      void utils.trades.list.invalidate();
+      toast.success(t("configImportSuccess", { count: result.inserted }));
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+
+  const handleExport = async (): Promise<void> => {
+    setExporting(true);
+    try {
+      const allTrades = await utils.trades.exportCsv.fetch({});
+      const serializedTrades = allTrades.map((trade) => ({
+        giftName: trade.giftName,
+        giftNumber: trade.giftNumber,
+        quantity: trade.quantity,
+        tradeCurrency: trade.tradeCurrency,
+        buyPrice: String(trade.buyPrice),
+        sellPrice: trade.sellPrice !== null ? String(trade.sellPrice) : null,
+        buyDate: trade.buyDate.toISOString(),
+        sellDate: trade.sellDate?.toISOString() ?? null,
+        buyMarketplace: trade.buyMarketplace,
+        sellMarketplace: trade.sellMarketplace,
+        commissionFlatStars: trade.commissionFlatStars !== null ? String(trade.commissionFlatStars) : null,
+        commissionPermille: trade.commissionPermille,
+        transferredCount: trade.transferredCount,
+        excludeFromPnl: trade.excludeFromPnl,
+        notes: trade.notes,
+      }));
+      const data = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        settings: settings ? {
+          defaultCommissionStars: String(settings.defaultCommissionStars),
+          defaultCommissionPermille: settings.defaultCommissionPermille,
+          defaultCurrency: settings.defaultCurrency,
+          timezone: settings.timezone,
+          starsToTonRate: settings.starsToTonRate,
+          locale: settings.locale,
+          profileType: settings.profileType,
+        } : null,
+        trades: serializedTrades,
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `giftfolio-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(t("configExportSuccess"));
+    } catch {
+      toast.error(t("configImportError"));
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -137,16 +186,18 @@ export default function SettingsPage(): React.ReactElement {
       try {
         const text = ev.target?.result;
         if (typeof text !== "string") throw new Error("Invalid file");
-        const data: unknown = JSON.parse(text);
-        if (
-          typeof data !== "object" || data === null ||
-          !("version" in data) || !("settings" in data)
-        ) {
+        const parsed: unknown = JSON.parse(text);
+        if (typeof parsed !== "object" || parsed === null || !("version" in parsed)) {
           throw new Error("Invalid backup format");
         }
-        const backup = data as { version: number; settings: Record<string, unknown> | null };
-        if (backup.settings) {
-          const s = backup.settings;
+        const data = parsed as Record<string, unknown>;
+        if (typeof data.version !== "number" || data.version !== 1) {
+          throw new Error("Unsupported backup version");
+        }
+
+        // Restore settings into form state
+        if (typeof data.settings === "object" && data.settings !== null) {
+          const s = data.settings as Record<string, unknown>;
           if (typeof s.defaultCommissionStars === "string") setCommissionStars(s.defaultCommissionStars);
           if (typeof s.defaultCommissionPermille === "number") setCommissionPermille(String(s.defaultCommissionPermille));
           if (s.defaultCurrency === "STARS" || s.defaultCurrency === "TON") setDefaultCurrency(s.defaultCurrency);
@@ -155,13 +206,35 @@ export default function SettingsPage(): React.ReactElement {
           if (s.locale === "en" || s.locale === "ru" || s.locale === "zh") setLocale(s.locale);
           if (profileTypes.includes(s.profileType as ProfileType)) setProfileType(s.profileType as ProfileType);
         }
-        toast.success(t("configImportSuccess", { count: 0 }));
+
+        // Import trades via bulkImport mutation
+        if (Array.isArray(data.trades) && data.trades.length > 0) {
+          const rows = (data.trades as Record<string, unknown>[]).map((row) => ({
+            giftName: String(row.giftName ?? ""),
+            giftNumber: typeof row.giftNumber === "string" ? row.giftNumber : null,
+            quantity: typeof row.quantity === "number" ? row.quantity : 1,
+            tradeCurrency: (row.tradeCurrency === "TON" ? "TON" : "STARS") as "STARS" | "TON",
+            buyPrice: BigInt(String(row.buyPrice ?? "0")),
+            sellPrice: row.sellPrice !== null && row.sellPrice !== undefined ? BigInt(String(row.sellPrice)) : null,
+            buyDate: new Date(String(row.buyDate)),
+            sellDate: row.sellDate ? new Date(String(row.sellDate)) : null,
+            buyMarketplace: validateMarketplace(row.buyMarketplace),
+            sellMarketplace: validateMarketplace(row.sellMarketplace),
+          }));
+          setImporting(true);
+          bulkImport.mutate(
+            { rows, skipErrors: true },
+            { onSettled: () => setImporting(false) },
+          );
+        } else {
+          // No trades, just settings restored
+          toast.success(t("configImportSuccess", { count: 0 }));
+        }
       } catch {
         toast.error(t("configImportError"));
       }
     };
     reader.readAsText(file);
-    // Reset input so the same file can be re-selected
     e.target.value = "";
   };
 
@@ -423,9 +496,9 @@ export default function SettingsPage(): React.ReactElement {
           <CardDescription>{t("configExportDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="outline" onClick={() => void handleExport()} disabled={exporting}>
             <Download className="mr-2 h-4 w-4" />
-            {t("configExportBtn")}
+            {exporting ? tc("loading") : t("configExportBtn")}
           </Button>
           <div>
             <input
@@ -435,9 +508,9 @@ export default function SettingsPage(): React.ReactElement {
               className="hidden"
               onChange={handleImportFile}
             />
-            <Button variant="outline" onClick={() => importFileRef.current?.click()}>
+            <Button variant="outline" onClick={() => importFileRef.current?.click()} disabled={importing}>
               <Upload className="mr-2 h-4 w-4" />
-              {t("configImportBtn")}
+              {importing ? tc("importing") : t("configImportBtn")}
             </Button>
           </div>
           <p className="w-full text-xs text-muted-foreground">{t("configImportDesc")}</p>
