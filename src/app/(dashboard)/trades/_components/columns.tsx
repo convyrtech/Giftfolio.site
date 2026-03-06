@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { formatStars, formatTon, type Stars, type NanoTon } from "@/lib/currencies";
 import { calculateProfit, calculateUnrealizedPnl } from "@/lib/pnl-engine";
 import { getGiftImageUrl } from "@/lib/gift-parser";
+import { getCollectionImageUrl } from "@/lib/gift-bubbles";
 import {
   Tooltip,
   TooltipContent,
@@ -118,7 +119,7 @@ export const columns: ColumnDef<Trade>[] = [
         : trade.giftName.toLowerCase();
       const imageUrl = hasNumber
         ? getGiftImageUrl(nameLower, Number(trade.giftNumber))
-        : null;
+        : getCollectionImageUrl(trade.giftName);
 
       return (
         <div className="flex items-center gap-2">
@@ -140,7 +141,7 @@ export const columns: ColumnDef<Trade>[] = [
           <div className="min-w-0">
             <div className="flex items-center gap-1 truncate text-sm font-medium">
               {trade.giftName}
-              {trade.quantity > 1 && (
+              {trade.quantity > 1 && hasNumber && (
                 <Badge variant="secondary" className="ml-1 px-1 py-0 text-[10px]">
                   x{trade.quantity}
                 </Badge>
@@ -172,7 +173,7 @@ export const columns: ColumnDef<Trade>[] = [
               })()}
             </div>
             <div className="text-xs text-muted-foreground">
-              {hasNumber ? `#${String(trade.giftNumber)}` : "Collection"}
+              {hasNumber ? `#${String(trade.giftNumber)}` : `×${trade.quantity} collection`}
             </div>
           </div>
         </div>
