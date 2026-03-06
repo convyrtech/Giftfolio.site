@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { Download, Upload, Wallet } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +18,9 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc/client";
+
+const profileTypes = ["flip", "invest"] as const;
+type ProfileType = (typeof profileTypes)[number];
 
 export default function SettingsPage(): React.ReactElement {
   const { data: settings, isLoading } = trpc.settings.get.useQuery();
@@ -30,6 +35,9 @@ export default function SettingsPage(): React.ReactElement {
   const [walletAddress, setWalletAddress] = useState("");
   const [starsToTonRate, setStarsToTonRate] = useState("");
   const [locale, setLocale] = useState<"en" | "ru" | "zh">("en");
+  const [profileType, setProfileType] = useState<ProfileType>("flip");
+
+  const importFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (settings) {
@@ -42,6 +50,8 @@ export default function SettingsPage(): React.ReactElement {
       setStarsToTonRate(settings.starsToTonRate ?? "");
       const l = settings.locale;
       if (l === "en" || l === "ru" || l === "zh") setLocale(l);
+      const p = settings.profileType;
+      if (profileTypes.includes(p as ProfileType)) setProfileType(p as ProfileType);
     }
   }, [settings]);
 
@@ -88,10 +98,71 @@ export default function SettingsPage(): React.ReactElement {
         timezone,
         starsToTonRate: starsToTonRate.trim() || null,
         locale,
+        profileType,
       });
     } catch {
       toast.error(t("invalidCommission"));
     }
+  };
+
+  const handleExport = (): void => {
+    const data = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      settings: settings ? {
+        defaultCommissionStars: String(settings.defaultCommissionStars),
+        defaultCommissionPermille: settings.defaultCommissionPermille,
+        defaultCurrency: settings.defaultCurrency,
+        timezone: settings.timezone,
+        starsToTonRate: settings.starsToTonRate,
+        locale: settings.locale,
+        profileType: settings.profileType,
+      } : null,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `giftfolio-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(t("configExportSuccess"));
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const text = ev.target?.result;
+        if (typeof text !== "string") throw new Error("Invalid file");
+        const data: unknown = JSON.parse(text);
+        if (
+          typeof data !== "object" || data === null ||
+          !("version" in data) || !("settings" in data)
+        ) {
+          throw new Error("Invalid backup format");
+        }
+        const backup = data as { version: number; settings: Record<string, unknown> | null };
+        if (backup.settings) {
+          const s = backup.settings;
+          if (typeof s.defaultCommissionStars === "string") setCommissionStars(s.defaultCommissionStars);
+          if (typeof s.defaultCommissionPermille === "number") setCommissionPermille(String(s.defaultCommissionPermille));
+          if (s.defaultCurrency === "STARS" || s.defaultCurrency === "TON") setDefaultCurrency(s.defaultCurrency);
+          if (typeof s.timezone === "string") setTimezone(s.timezone);
+          if (typeof s.starsToTonRate === "string") setStarsToTonRate(s.starsToTonRate);
+          if (s.locale === "en" || s.locale === "ru" || s.locale === "zh") setLocale(s.locale);
+          if (profileTypes.includes(s.profileType as ProfileType)) setProfileType(s.profileType as ProfileType);
+        }
+        toast.success(t("configImportSuccess", { count: 0 }));
+      } catch {
+        toast.error(t("configImportError"));
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so the same file can be re-selected
+    e.target.value = "";
   };
 
   if (isLoading) return <SettingsSkeleton />;
@@ -206,6 +277,35 @@ export default function SettingsPage(): React.ReactElement {
         </CardContent>
       </Card>
 
+      {/* Profile Type */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("profileType")}</CardTitle>
+          <CardDescription>{t("profileTypeDesc")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-3">
+            {profileTypes.map((pt) => (
+              <button
+                key={pt}
+                type="button"
+                onClick={() => setProfileType(pt)}
+                className={`rounded-lg border p-4 text-left transition-colors ${
+                  profileType === pt
+                    ? "border-primary bg-primary/5 ring-1 ring-primary"
+                    : "border-border hover:border-muted-foreground/30"
+                }`}
+              >
+                <p className="font-medium">{t(pt === "flip" ? "profileFlip" : "profileInvest")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t(pt === "flip" ? "profileFlipDesc" : "profileInvestDesc")}
+                </p>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Stars→TON Rate */}
       <Card>
         <CardHeader>
@@ -296,6 +396,51 @@ export default function SettingsPage(): React.ReactElement {
           >
             {updateWalletAddress.isPending ? t("savingWallet") : t("saveWallet")}
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* TON Connect stub */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wallet className="h-5 w-5" />
+            {t("tonConnect")}
+            <Badge variant="secondary">{t("tonConnectSoon")}</Badge>
+          </CardTitle>
+          <CardDescription>{t("tonConnectDesc")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button disabled variant="outline">
+            {t("tonConnectBtn")}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Config Export / Import */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("configExport")}</CardTitle>
+          <CardDescription>{t("configExportDesc")}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-3">
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" />
+            {t("configExportBtn")}
+          </Button>
+          <div>
+            <input
+              ref={importFileRef}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+            <Button variant="outline" onClick={() => importFileRef.current?.click()}>
+              <Upload className="mr-2 h-4 w-4" />
+              {t("configImportBtn")}
+            </Button>
+          </div>
+          <p className="w-full text-xs text-muted-foreground">{t("configImportDesc")}</p>
         </CardContent>
       </Card>
 

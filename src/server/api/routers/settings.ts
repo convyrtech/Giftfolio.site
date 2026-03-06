@@ -53,6 +53,7 @@ export const settingsRouter = router({
         timezone: ianaTimezone.optional(),
         starsToTonRate: z.string().regex(/^\d+(\.\d{1,9})?$/, "Must be a positive decimal number").refine((v) => parseFloat(v) > 0, "Rate must be greater than 0").nullable().optional(),
         locale: z.enum(["en", "ru", "zh"]).optional(),
+        profileType: z.enum(["flip", "invest"]).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -76,6 +77,9 @@ export const settingsRouter = router({
       }
       if (input.locale !== undefined) {
         updateData.locale = input.locale;
+      }
+      if (input.profileType !== undefined) {
+        updateData.profileType = input.profileType;
       }
 
       if (Object.keys(updateData).length === 0) {

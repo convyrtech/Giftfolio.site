@@ -8,7 +8,8 @@
     "mobileNav": "Mobile navigation",
     "toggleTheme": "Toggle theme",
     "signOut": "Sign out",
-    "signInTelegram": "Sign in with Telegram"
+    "signInTelegram": "Sign in with Telegram",
+    "premium": "Premium"
   },
   "common": {
     "save": "Save",
@@ -231,7 +232,25 @@
     "settingsSaved": "Settings saved",
     "saveSettings": "Save settings",
     "loadingSettings": "Loading settings",
-    "invalidCommission": "Invalid commission value"
+    "invalidCommission": "Invalid commission value",
+    "profileType": "Profile Type",
+    "profileTypeDesc": "Affects how analytics are displayed. No functional difference yet.",
+    "profileFlip": "Flipper",
+    "profileFlipDesc": "Short-term trading, quick buys & sells",
+    "profileInvest": "Investor",
+    "profileInvestDesc": "Long-term holding, portfolio growth",
+    "tonConnect": "TON Connect",
+    "tonConnectDesc": "Connect your TON wallet for one-click authentication and transactions. Coming soon.",
+    "tonConnectBtn": "Connect Wallet",
+    "tonConnectSoon": "Coming soon",
+    "configExport": "Data Export",
+    "configExportDesc": "Download all your trades and settings as a JSON file. Use for backup or migration.",
+    "configExportBtn": "Export JSON",
+    "configExportSuccess": "Data exported successfully",
+    "configImportBtn": "Import JSON",
+    "configImportDesc": "Restore from a previously exported JSON backup.",
+    "configImportSuccess": "Imported {count} trades",
+    "configImportError": "Invalid backup file"
   },
   "import": {
     "title": "Import Trades",
@@ -291,6 +310,24 @@
     "failedClose": "Failed to close:",
     "selectAtLeastOne": "Select at least one trade to import",
     "rateLimitedNote": " Scan stopped early due to rate limit."
+  },
+  "premium": {
+    "title": "Premium",
+    "subtitle": "Upgrade your Giftfolio experience",
+    "comingSoon": "Premium plans are coming soon. All features are currently free.",
+    "free": "Free",
+    "freeDesc": "Basic tracking",
+    "freeFeatures": "Up to 100 trades, Basic analytics, CSV export",
+    "starter": "Starter",
+    "starterPrice": "$4.99/mo",
+    "starterDesc": "For active traders",
+    "starterFeatures": "Unlimited trades, Advanced analytics, Excel export, Priority support",
+    "pro": "Pro",
+    "proPrice": "$9.99/mo",
+    "proDesc": "Full power",
+    "proFeatures": "Everything in Starter, TON Connect, Auto-import, API access",
+    "currentPlan": "Current plan",
+    "popular": "Popular"
   },
   "market": {
     "title": "Market",

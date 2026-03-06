@@ -8,7 +8,8 @@
     "mobileNav": "移动导航",
     "toggleTheme": "切换主题",
     "signOut": "退出",
-    "signInTelegram": "通过 Telegram 登录"
+    "signInTelegram": "通过 Telegram 登录",
+    "premium": "Premium"
   },
   "common": {
     "save": "保存",
@@ -231,7 +232,25 @@
     "settingsSaved": "设置已保存",
     "saveSettings": "保存设置",
     "loadingSettings": "加载设置",
-    "invalidCommission": "佣金值无效"
+    "invalidCommission": "佣金值无效",
+    "profileType": "档案类型",
+    "profileTypeDesc": "影响分析展示方式。目前功能上无差异。",
+    "profileFlip": "短线交易者",
+    "profileFlipDesc": "短期交易，快速买卖",
+    "profileInvest": "投资者",
+    "profileInvestDesc": "长期持有，投资组合增长",
+    "tonConnect": "TON Connect",
+    "tonConnectDesc": "连接您的 TON 钱包，实现一键验证和交易。即将推出。",
+    "tonConnectBtn": "连接钱包",
+    "tonConnectSoon": "即将推出",
+    "configExport": "数据导出",
+    "configExportDesc": "将所有交易和设置下载为 JSON 文件。用于备份或迁移。",
+    "configExportBtn": "导出 JSON",
+    "configExportSuccess": "数据导出成功",
+    "configImportBtn": "导入 JSON",
+    "configImportDesc": "从之前导出的 JSON 备份中恢复。",
+    "configImportSuccess": "已导入 {count} 笔交易",
+    "configImportError": "备份文件无效"
   },
   "import": {
     "title": "导入交易",
@@ -291,6 +310,24 @@
     "failedClose": "关闭失败：",
     "selectAtLeastOne": "请至少选择一笔交易进行导入",
     "rateLimitedNote": " 由于速率限制，扫描提前停止。"
+  },
+  "premium": {
+    "title": "Premium",
+    "subtitle": "升级您的 Giftfolio 体验",
+    "comingSoon": "Premium 计划即将推出。目前所有功能免费。",
+    "free": "免费",
+    "freeDesc": "基础追踪",
+    "freeFeatures": "最多 100 笔交易, 基础分析, CSV 导出",
+    "starter": "入门版",
+    "starterPrice": "$4.99/月",
+    "starterDesc": "适合活跃交易者",
+    "starterFeatures": "无限交易, 高级分析, Excel 导出, 优先支持",
+    "pro": "专业版",
+    "proPrice": "$9.99/月",
+    "proDesc": "全部功能",
+    "proFeatures": "入门版全部功能, TON Connect, 自动导入, API 访问",
+    "currentPlan": "当前计划",
+    "popular": "热门"
   },
   "market": {
     "title": "市场",
