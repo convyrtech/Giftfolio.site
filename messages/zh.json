@@ -251,7 +251,13 @@
     "configImportBtn": "导入 JSON",
     "configImportDesc": "从之前导出的 JSON 备份中恢复。",
     "configImportSuccess": "已导入 {count} 笔交易",
-    "configImportError": "备份文件无效"
+    "configImportError": "备份文件无效",
+    "emailLink": "绑定邮箱",
+    "emailLinkDesc": "添加邮箱用于备用登录和通知。",
+    "emailLinkBtn": "绑定邮箱",
+    "customSort": "自定义排序",
+    "customSortDesc": "拖拽交易进行手动排序。排序顺序将保存到账户。",
+    "customSortBtn": "启用自定义排序"
   },
   "import": {
     "title": "导入交易",

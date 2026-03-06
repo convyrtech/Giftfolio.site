@@ -251,7 +251,13 @@
     "configImportBtn": "Импорт JSON",
     "configImportDesc": "Восстановить из ранее экспортированного JSON бэкапа.",
     "configImportSuccess": "Импортировано {count} сделок",
-    "configImportError": "Некорректный файл бэкапа"
+    "configImportError": "Некорректный файл бэкапа",
+    "emailLink": "Привязать email",
+    "emailLinkDesc": "Добавьте email для резервного входа и уведомлений.",
+    "emailLinkBtn": "Привязать email",
+    "customSort": "Ручная сортировка",
+    "customSortDesc": "Перетаскивайте сделки для ручной сортировки. Порядок сохраняется.",
+    "customSortBtn": "Включить ручную сортировку"
   },
   "import": {
     "title": "Импорт сделок",

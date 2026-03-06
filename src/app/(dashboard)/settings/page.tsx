@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Download, Upload, Wallet } from "lucide-react";
+import { Download, GripVertical, Mail, Upload, Wallet } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -555,6 +555,40 @@ export default function SettingsPage(): React.ReactElement {
             </Button>
           </div>
           <p className="w-full text-xs text-muted-foreground">{t("configImportDesc")}</p>
+        </CardContent>
+      </Card>
+
+      {/* Email link stub */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            {t("emailLink")}
+            <Badge variant="secondary">{t("tonConnectSoon")}</Badge>
+          </CardTitle>
+          <CardDescription>{t("emailLinkDesc")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button disabled variant="outline">
+            {t("emailLinkBtn")}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Custom sort order stub */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <GripVertical className="h-5 w-5" />
+            {t("customSort")}
+            <Badge variant="secondary">{t("tonConnectSoon")}</Badge>
+          </CardTitle>
+          <CardDescription>{t("customSortDesc")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button disabled variant="outline">
+            {t("customSortBtn")}
+          </Button>
         </CardContent>
       </Card>
 

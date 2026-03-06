@@ -251,7 +251,13 @@
     "configImportBtn": "Import JSON",
     "configImportDesc": "Restore from a previously exported JSON backup.",
     "configImportSuccess": "Imported {count} trades",
-    "configImportError": "Invalid backup file"
+    "configImportError": "Invalid backup file",
+    "emailLink": "Link Email",
+    "emailLinkDesc": "Add an email address to your account for backup login and notifications.",
+    "emailLinkBtn": "Link Email",
+    "customSort": "Custom Sort Order",
+    "customSortDesc": "Drag trades to reorder them manually. Custom order is saved per account.",
+    "customSortBtn": "Enable Custom Sort"
   },
   "import": {
     "title": "Import Trades",
