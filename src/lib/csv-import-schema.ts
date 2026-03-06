@@ -260,6 +260,12 @@ export const importRowSchema = z.object({
   sellPrice: z.coerce.bigint().min(0n).nullable(),
   buyMarketplace: z.enum(["fragment", "getgems", "tonkeeper", "p2p", "other"]).nullable(),
   sellMarketplace: z.enum(["fragment", "getgems", "tonkeeper", "p2p", "other"]).nullable(),
+  // Optional fields for JSON config import round-trip (not used by CSV import)
+  commissionFlatStars: z.coerce.bigint().min(0n).optional(),
+  commissionPermille: z.number().int().min(0).max(1000).optional(),
+  transferredCount: z.number().int().min(1).max(9999).nullable().optional(),
+  excludeFromPnl: z.boolean().optional(),
+  notes: z.string().max(1000).nullable().optional(),
 }).refine(
   (d) => !d.sellDate || d.sellPrice !== null,
   { message: "sellPrice required when sellDate is set", path: ["sellPrice"] },

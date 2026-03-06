@@ -1,10 +1,13 @@
-"use client";
-
-import { useTranslations } from "next-intl";
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { Crown, Check } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+  title: "Premium",
+};
 
 const tiers = [
   { key: "free", featureCount: 3, featured: false, current: true },
@@ -12,8 +15,8 @@ const tiers = [
   { key: "pro", featureCount: 4, featured: true, current: false },
 ] as const;
 
-export default function PremiumPage(): React.ReactElement {
-  const t = useTranslations("premium");
+export default async function PremiumPage(): Promise<React.ReactElement> {
+  const t = await getTranslations("premium");
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 pb-4">

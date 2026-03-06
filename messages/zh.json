@@ -9,7 +9,7 @@
     "toggleTheme": "切换主题",
     "signOut": "退出",
     "signInTelegram": "通过 Telegram 登录",
-    "premium": "Premium"
+    "premium": "会员"
   },
   "common": {
     "save": "保存",
@@ -313,9 +313,9 @@
     "rateLimitedNote": " 由于速率限制，扫描提前停止。"
   },
   "premium": {
-    "title": "Premium",
+    "title": "会员",
     "subtitle": "升级您的 Giftfolio 体验",
-    "comingSoon": "Premium 计划即将推出。目前所有功能免费。",
+    "comingSoon": "会员计划即将推出。目前所有功能免费。",
     "comingSoonShort": "即将推出",
     "free": "免费",
     "freeDesc": "基础追踪",

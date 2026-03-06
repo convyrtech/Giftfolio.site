@@ -666,14 +666,15 @@ export const tradesRouter = router({
           buyDate: row.buyDate,
           sellDate: row.sellDate,
           // TON trades cannot have flat Stars commission (DB constraint)
-          commissionFlatStars: row.tradeCurrency === "TON" ? 0n : defaultFlat,
-          commissionPermille: defaultPerm,
+          commissionFlatStars: row.tradeCurrency === "TON" ? 0n : (row.commissionFlatStars ?? defaultFlat),
+          commissionPermille: row.commissionPermille ?? defaultPerm,
+          transferredCount: row.transferredCount ?? null,
           buyRateUsd: rateStr,
           sellRateUsd: row.sellPrice !== null ? rateStr : null,
           buyMarketplace: row.buyMarketplace,
           sellMarketplace: row.sellMarketplace,
-          excludeFromPnl: false,
-          notes: null,
+          excludeFromPnl: row.excludeFromPnl ?? false,
+          notes: row.notes ?? null,
         };
       }
 

@@ -22,6 +22,10 @@ import { trpc } from "@/lib/trpc/client";
 const profileTypes = ["flip", "invest"] as const;
 type ProfileType = (typeof profileTypes)[number];
 
+function isProfileType(v: string): v is ProfileType {
+  return (profileTypes as readonly string[]).includes(v);
+}
+
 const validMarketplaces = ["fragment", "getgems", "tonkeeper", "p2p", "other"] as const;
 type Marketplace = (typeof validMarketplaces)[number];
 
@@ -61,7 +65,7 @@ export default function SettingsPage(): React.ReactElement {
       const l = settings.locale;
       if (l === "en" || l === "ru" || l === "zh") setLocale(l);
       const p = settings.profileType;
-      if (profileTypes.includes(p as ProfileType)) setProfileType(p as ProfileType);
+      if (isProfileType(p)) setProfileType(p);
     }
   }, [settings]);
 
@@ -73,7 +77,8 @@ export default function SettingsPage(): React.ReactElement {
       if (variables.locale) {
         const current = document.cookie.match(/(?:^|; )locale=([^;]*)/)?.[1];
         if (current !== variables.locale) {
-          document.cookie = `locale=${variables.locale};path=/;max-age=${365 * 24 * 60 * 60};samesite=lax`;
+          const secure = window.location.protocol === "https:" ? ";secure" : "";
+          document.cookie = `locale=${variables.locale};path=/;max-age=${365 * 24 * 60 * 60};samesite=lax${secure}`;
           window.location.reload();
         }
       }
@@ -204,9 +209,9 @@ export default function SettingsPage(): React.ReactElement {
           const restoredPermille = typeof s.defaultCommissionPermille === "number" ? s.defaultCommissionPermille : parseInt(commissionPermille || "0", 10);
           const restoredCurrency = (s.defaultCurrency === "STARS" || s.defaultCurrency === "TON") ? s.defaultCurrency : defaultCurrency;
           const restoredTz = typeof s.timezone === "string" ? s.timezone : timezone;
-          const restoredRate = typeof s.starsToTonRate === "string" ? s.starsToTonRate : starsToTonRate;
+          const restoredRate = s.starsToTonRate === null ? "" : (typeof s.starsToTonRate === "string" ? s.starsToTonRate : starsToTonRate);
           const restoredLocale = (s.locale === "en" || s.locale === "ru" || s.locale === "zh") ? s.locale : locale;
-          const restoredProfile = profileTypes.includes(s.profileType as ProfileType) ? (s.profileType as ProfileType) : profileType;
+          const restoredProfile = typeof s.profileType === "string" && isProfileType(s.profileType) ? s.profileType : profileType;
 
           // Update form state
           setCommissionStars(restoredStars);
@@ -231,18 +236,29 @@ export default function SettingsPage(): React.ReactElement {
 
         // Import trades via bulkImport mutation
         if (Array.isArray(data.trades) && data.trades.length > 0) {
-          const rows = (data.trades as Record<string, unknown>[]).map((row) => ({
-            giftName: String(row.giftName ?? ""),
-            giftNumber: typeof row.giftNumber === "string" ? row.giftNumber : null,
-            quantity: typeof row.quantity === "number" ? row.quantity : 1,
-            tradeCurrency: (row.tradeCurrency === "TON" ? "TON" : "STARS") as "STARS" | "TON",
-            buyPrice: BigInt(String(row.buyPrice ?? "0")),
-            sellPrice: row.sellPrice !== null && row.sellPrice !== undefined ? BigInt(String(row.sellPrice)) : null,
-            buyDate: new Date(String(row.buyDate)),
-            sellDate: row.sellDate ? new Date(String(row.sellDate)) : null,
-            buyMarketplace: validateMarketplace(row.buyMarketplace),
-            sellMarketplace: validateMarketplace(row.sellMarketplace),
-          }));
+          const rows = (data.trades as unknown[])
+            .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+            .map((row) => {
+              const buyDate = new Date(String(row.buyDate));
+              const sellDateRaw = row.sellDate ? new Date(String(row.sellDate)) : null;
+              return {
+                giftName: String(row.giftName ?? ""),
+                giftNumber: typeof row.giftNumber === "string" ? row.giftNumber : null,
+                quantity: typeof row.quantity === "number" ? row.quantity : 1,
+                tradeCurrency: (row.tradeCurrency === "TON" ? "TON" : "STARS") as "STARS" | "TON",
+                buyPrice: BigInt(String(row.buyPrice ?? "0")),
+                sellPrice: row.sellPrice !== null && row.sellPrice !== undefined ? BigInt(String(row.sellPrice)) : null,
+                buyDate: isNaN(buyDate.getTime()) ? new Date() : buyDate,
+                sellDate: sellDateRaw && !isNaN(sellDateRaw.getTime()) ? sellDateRaw : null,
+                buyMarketplace: validateMarketplace(row.buyMarketplace),
+                sellMarketplace: validateMarketplace(row.sellMarketplace),
+                commissionFlatStars: row.commissionFlatStars !== null && row.commissionFlatStars !== undefined ? BigInt(String(row.commissionFlatStars)) : undefined,
+                commissionPermille: typeof row.commissionPermille === "number" ? row.commissionPermille : undefined,
+                transferredCount: typeof row.transferredCount === "number" ? row.transferredCount : null,
+                excludeFromPnl: typeof row.excludeFromPnl === "boolean" ? row.excludeFromPnl : undefined,
+                notes: typeof row.notes === "string" ? row.notes : null,
+              };
+            });
           setImporting(true);
           bulkImport.mutate(
             { rows, skipErrors: true },
@@ -385,7 +401,7 @@ export default function SettingsPage(): React.ReactElement {
                 key={pt}
                 type="button"
                 role="radio"
-                aria-checked={profileType === pt}
+                aria-checked={profileType === pt ? "true" : "false"}
                 onClick={() => setProfileType(pt)}
                 className={`rounded-lg border p-4 text-left transition-colors ${
                   profileType === pt
