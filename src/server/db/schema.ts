@@ -134,6 +134,7 @@ export const trades = pgTable(
 
     // Collection / batch support
     quantity: smallint().default(1).notNull(),
+    transferredCount: smallint("transferred_count"), // nullable = same as quantity
 
     // Gift attributes (nullable — populated from API)
     attrModel: text("attr_model"),
@@ -217,6 +218,14 @@ export const trades = pgTable(
     check(
       "chk_sell_date_price_pair",
       sql`(${table.sellDate} IS NULL AND ${table.sellPrice} IS NULL) OR (${table.sellDate} IS NOT NULL AND ${table.sellPrice} IS NOT NULL)`,
+    ),
+    check(
+      "chk_transferred_count_range",
+      sql`${table.transferredCount} IS NULL OR (${table.transferredCount} >= 1 AND ${table.transferredCount} <= 9999)`,
+    ),
+    check(
+      "chk_transferred_lte_quantity",
+      sql`${table.transferredCount} IS NULL OR ${table.transferredCount} <= ${table.quantity}`,
     ),
   ],
 );

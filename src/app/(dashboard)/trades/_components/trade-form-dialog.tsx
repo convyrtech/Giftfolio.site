@@ -130,6 +130,19 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
   const [sellMarketplace, setSellMarketplace] = useState<Marketplace | "">(trade?.sellMarketplace ?? "");
   const [notes, setNotes] = useState(trade?.notes ?? "");
   const [quantity, setQuantity] = useState(trade ? String(trade.quantity) : "1");
+  const [transferredCount, setTransferredCount] = useState(
+    trade?.transferredCount != null ? String(trade.transferredCount) : "",
+  );
+  function handleQuantityChange(raw: string): void {
+    const val = raw.replace(/[^0-9]/g, "");
+    setQuantity(val);
+    // Reset transferredCount if it exceeds new quantity
+    const newQty = parseInt(val, 10);
+    const tc = parseInt(transferredCount, 10);
+    if (!isNaN(tc) && !isNaN(newQty) && tc > newQty) {
+      setTransferredCount("");
+    }
+  }
   const [excludeFromPnl, setExcludeFromPnl] = useState(trade?.excludeFromPnl ?? false);
 
   // Commission override
@@ -207,6 +220,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
           sellMarketplace: sellMarketplace || undefined,
           notes: notes || undefined,
           quantity: quantity ? parseInt(quantity, 10) : undefined,
+          transferredCount: transferredCount ? parseInt(transferredCount, 10) : null,
           isHidden: trade.isHidden,
           excludeFromPnl,
           commissionFlatStars: commissionFlat ? BigInt(commissionFlat) : undefined,
@@ -235,6 +249,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
           sellPrice: sellPrice ? BigInt(sellPrice) : undefined,
           sellDate: sellDate ? toUTCDate(sellDate) : undefined,
           quantity: parseInt(quantity, 10) || 1,
+          transferredCount: transferredCount ? parseInt(transferredCount, 10) : undefined,
           buyMarketplace: buyMarketplace || undefined,
           sellMarketplace: sellMarketplace || undefined,
           excludeFromPnl,
@@ -343,7 +358,7 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
               inputMode="numeric"
               placeholder="1"
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value.replace(/[^0-9]/g, ""))}
+              onChange={(e) => handleQuantityChange(e.target.value)}
             />
           </div>
         </div>
@@ -358,8 +373,32 @@ function TradeForm({ trade, onSuccess }: TradeFormProps): React.ReactElement {
             type="text"
             inputMode="numeric"
             value={quantity}
-            onChange={(e) => setQuantity(e.target.value.replace(/[^0-9]/g, ""))}
+            onChange={(e) => handleQuantityChange(e.target.value)}
           />
+        </div>
+      )}
+
+      {/* Transferred count (shown when quantity > 1) */}
+      {parseInt(quantity, 10) > 1 && (
+        <div className="space-y-2">
+          <Label htmlFor="transferredCount">Transferred Count</Label>
+          <Input
+            id="transferredCount"
+            type="text"
+            inputMode="numeric"
+            placeholder={`Same as quantity (${quantity})`}
+            value={transferredCount}
+            onChange={(e) => {
+              const val = e.target.value.replace(/[^0-9]/g, "");
+              const parsed = parseInt(val, 10);
+              const qty = parseInt(quantity, 10);
+              if (!isNaN(parsed) && !isNaN(qty) && parsed > qty) return;
+              setTransferredCount(val);
+            }}
+          />
+          <p className="text-xs text-muted-foreground">
+            How many items were transferred (flat commission × this count). Leave empty = same as quantity.
+          </p>
         </div>
       )}
 

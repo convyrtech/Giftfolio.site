@@ -14,6 +14,7 @@ export interface TradeInput {
   buyRateUsd: string | null; // NUMERIC as string from DB
   sellRateUsd: string | null;
   quantity?: number; // default 1
+  transferredCount?: number | null; // for collections: flat commission × transferredCount
 }
 
 export interface ProfitResult {
@@ -75,21 +76,20 @@ export function calculateProfit(trade: TradeInput): ProfitResult {
     };
   }
 
-  // Per-unit commission (each gift = one transfer)
-  const unitCommission = calculateCommission(
-    tradeCurrency,
-    sellPrice,
-    commissionFlatStars,
-    commissionPermille,
-  );
+  // Commission: flat × transferredCount + permille × qty
+  // transferredCount = how many items were actually transferred (each incurs flat fee)
+  // For single items or when null, transferredCount = quantity
+  const transferred = BigInt(trade.transferredCount ?? trade.quantity ?? 1);
+  const permillePerUnit = (sellPrice * BigInt(commissionPermille) + 500n) / 1000n;
+  const flatTotal = tradeCurrency === "STARS" ? commissionFlatStars * transferred : 0n;
+  const totalCommission = flatTotal + permillePerUnit * qty;
 
-  const unitGross = sellPrice - buyPrice;
-  const unitNet = unitGross - unitCommission;
+  const grossProfit = (sellPrice - buyPrice) * qty;
+  const netProfit = grossProfit - totalCommission;
 
-  // Total = per-unit * quantity
-  const totalCommission = unitCommission * qty;
-  const grossProfit = unitGross * qty;
-  const netProfit = unitNet * qty;
+  // Per-unit net for percent calculation — derive from total, not per-unit formula
+  // (flat commission is shared across transferred items, not applied per-unit)
+  const unitNet = qty > 0n ? netProfit / qty : 0n;
 
   const buyValueUsd = computeUsdValue(tradeCurrency, buyPrice * qty, trade.buyRateUsd);
   const sellValueUsd = computeUsdValue(tradeCurrency, sellPrice * qty, trade.sellRateUsd);
@@ -138,6 +138,9 @@ export interface UnrealizedPnlResult {
  * - TON trades: null (can't subtract NanoTon from Stars without rate)
  *
  * Commission is calculated as if selling at floor price.
+ * NOTE: For collections with transferredCount < quantity, flat commission is
+ * approximated as flat × quantity (not × transferredCount) since transferredCount
+ * only applies to completed trades. Unrealized = hypothetical full-batch sell.
  */
 export function calculateUnrealizedPnl(
   buyPrice: bigint,

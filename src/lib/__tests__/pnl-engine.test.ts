@@ -374,4 +374,65 @@ describe("calculateProfit with quantity", () => {
     expect(result.netProfit).toBe(5_200_000_000n);
     expect(result.totalCommission).toBe(800_000_000n);
   });
+
+  it("flat commission uses transferredCount when provided", () => {
+    const trade: TradeInput = {
+      tradeCurrency: "STARS",
+      buyPrice: 1000n,
+      sellPrice: 1500n,
+      commissionFlatStars: 50n,
+      commissionPermille: 0,
+      buyRateUsd: null,
+      sellRateUsd: null,
+      quantity: 100,
+      transferredCount: 10,
+    };
+    const result = calculateProfit(trade);
+    // flat = 50 × 10 = 500, permille = 0
+    // gross = (1500 - 1000) × 100 = 50000
+    // net = 50000 - 500 = 49500
+    expect(result.totalCommission).toBe(500n);
+    expect(result.netProfit).toBe(49500n);
+  });
+
+  it("null transferredCount falls back to quantity for flat commission", () => {
+    const trade: TradeInput = {
+      tradeCurrency: "STARS",
+      buyPrice: 1000n,
+      sellPrice: 1500n,
+      commissionFlatStars: 50n,
+      commissionPermille: 0,
+      buyRateUsd: null,
+      sellRateUsd: null,
+      quantity: 3,
+      transferredCount: null,
+    };
+    const result = calculateProfit(trade);
+    // flat = 50 × 3 = 150 (falls back to quantity)
+    expect(result.totalCommission).toBe(150n);
+    expect(result.netProfit).toBe(1350n); // (1500-1000)*3 - 150
+  });
+
+  it("transferredCount=1 with large quantity — flat charged once", () => {
+    const trade: TradeInput = {
+      tradeCurrency: "STARS",
+      buyPrice: 100n,
+      sellPrice: 200n,
+      commissionFlatStars: 10n,
+      commissionPermille: 100, // 10%
+      buyRateUsd: null,
+      sellRateUsd: null,
+      quantity: 50,
+      transferredCount: 1,
+    };
+    const result = calculateProfit(trade);
+    // flat = 10 × 1 = 10
+    // permille per unit = ROUND(200 × 100 / 1000) = 20
+    // permille total = 20 × 50 = 1000
+    // total commission = 10 + 1000 = 1010
+    // gross = (200 - 100) × 50 = 5000
+    // net = 5000 - 1010 = 3990
+    expect(result.totalCommission).toBe(1010n);
+    expect(result.netProfit).toBe(3990n);
+  });
 });

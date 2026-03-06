@@ -75,6 +75,7 @@ function computeProfit(trade: Trade): { value: bigint; percent: number | null } 
     buyRateUsd: trade.buyRateUsd,
     sellRateUsd: trade.sellRateUsd,
     quantity: trade.quantity,
+    transferredCount: trade.transferredCount,
   });
   if (result.netProfit === null) return null;
   return { value: result.netProfit, percent: result.profitPercent };

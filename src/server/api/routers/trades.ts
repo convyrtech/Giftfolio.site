@@ -24,6 +24,7 @@ const tradeInput = z.object({
   buyDate: z.coerce.date(),
   sellDate: z.coerce.date().optional(),
   quantity: z.number().int().min(1).max(9999).default(1),
+  transferredCount: z.number().int().min(1).max(9999).optional(),
   commissionFlatStars: z.coerce.bigint().min(0n).optional(),
   commissionPermille: z.number().int().min(0).max(1000).optional(),
   buyMarketplace: marketplaceEnum.optional(),
@@ -49,6 +50,9 @@ const tradeInput = z.object({
 ).refine(
   (data) => !data.sellDate || !data.buyDate || data.sellDate >= data.buyDate,
   { message: "Sell date cannot be before buy date", path: ["sellDate"] },
+).refine(
+  (data) => !data.transferredCount || data.transferredCount <= data.quantity,
+  { message: "Transferred count cannot exceed quantity", path: ["transferredCount"] },
 );
 
 type SellMatchRow = {
@@ -221,6 +225,7 @@ export const tradesRouter = router({
           giftName,
           giftNumber,
           quantity: input.quantity,
+          transferredCount: input.transferredCount ?? null,
           tradeCurrency: input.tradeCurrency,
           buyPrice: input.buyPrice,
           sellPrice: input.sellPrice ?? null,
@@ -267,6 +272,7 @@ export const tradesRouter = router({
         commissionFlatStars: z.coerce.bigint().min(0n).optional(),
         commissionPermille: z.number().int().min(0).max(1000).optional(),
         quantity: z.number().int().min(1).max(9999).optional(),
+        transferredCount: z.number().int().min(1).max(9999).nullable().optional(),
         isHidden: z.boolean().optional(),
         excludeFromPnl: z.boolean().optional(),
       }),
@@ -300,6 +306,18 @@ export const tradesRouter = router({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Buy date cannot be after sell date",
+        });
+      }
+
+      // Validate transferredCount does not exceed quantity after merge
+      const finalQuantity = input.quantity ?? existing.quantity;
+      const finalTransferred = input.transferredCount !== undefined
+        ? input.transferredCount
+        : existing.transferredCount;
+      if (finalTransferred !== null && finalTransferred > finalQuantity) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Transferred count cannot exceed quantity",
         });
       }
 
@@ -356,6 +374,9 @@ export const tradesRouter = router({
       }
       if (input.quantity !== undefined) {
         updateData.quantity = input.quantity;
+      }
+      if (input.transferredCount !== undefined) {
+        updateData.transferredCount = input.transferredCount;
       }
       if (input.isHidden !== undefined) {
         updateData.isHidden = input.isHidden;
@@ -446,7 +467,9 @@ export const tradesRouter = router({
       const updateData: Partial<Trade> = { updatedAt: new Date() };
 
       // Note: buyDate <= sellDate not validated per-trade in bulk ops (would require SELECT per row).
-      // Individual update mutation enforces this. Bulk is best-effort — user should verify.
+      // Note: If bulk quantity change is ever added, must also null transferredCount to avoid
+      //   chk_transferred_lte_quantity constraint violation. Individual update handles this.
+      // Bulk is best-effort — user should verify.
       if (fields.buyPrice !== undefined) updateData.buyPrice = fields.buyPrice;
       if (fields.sellPrice !== undefined) updateData.sellPrice = fields.sellPrice;
       if (fields.isHidden !== undefined) updateData.isHidden = fields.isHidden;
