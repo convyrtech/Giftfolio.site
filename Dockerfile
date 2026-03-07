@@ -12,6 +12,17 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Railway injects env vars as build args — declare them so Next.js can inline NEXT_PUBLIC_* and validate env.ts
+ARG DATABASE_URL
+ARG TELEGRAM_BOT_TOKEN
+ARG BETTER_AUTH_SECRET
+ARG NEXT_PUBLIC_TELEGRAM_BOT_USERNAME
+ARG NEXT_PUBLIC_APP_URL
+ARG UPSTASH_REDIS_REST_URL
+ARG UPSTASH_REDIS_REST_TOKEN
+ARG SENTRY_DSN
+
 RUN npm run build
 
 # Production image
