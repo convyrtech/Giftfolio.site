@@ -176,6 +176,8 @@
     "starsProfit": "Stars 利润",
     "combined": "合计",
     "combinedRate": "@ {rate} ★/TON",
+    "usdtProfit": "USDT 利润",
+    "usdtPartial": "TON 汇率不可用",
     "totalTrades": "总交易数",
     "closedCount": "{count} 已关闭",
     "portfolioValue": "投资组合价值",

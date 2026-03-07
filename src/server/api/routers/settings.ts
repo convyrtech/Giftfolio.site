@@ -49,7 +49,7 @@ export const settingsRouter = router({
       z.object({
         defaultCommissionStars: z.coerce.bigint().min(0n).optional(),
         defaultCommissionPermille: z.number().int().min(0).max(1000).optional(),
-        defaultCurrency: z.enum(["STARS", "TON"]).optional(),
+        defaultCurrency: z.enum(["STARS", "TON", "USDT"]).optional(),
         timezone: ianaTimezone.optional(),
         starsToTonRate: z.string().regex(/^\d+(\.\d{1,9})?$/, "Must be a positive decimal number").refine((v) => parseFloat(v) > 0, "Rate must be greater than 0").nullable().optional(),
         locale: z.enum(["en", "ru", "zh"]).optional(),

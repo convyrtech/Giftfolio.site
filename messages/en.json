@@ -176,6 +176,8 @@
     "starsProfit": "Stars Profit",
     "combined": "Combined",
     "combinedRate": "@ {rate} ★/TON",
+    "usdtProfit": "USDT Profit",
+    "usdtPartial": "TON rate unavailable",
     "totalTrades": "Total Trades",
     "closedCount": "{count} closed",
     "portfolioValue": "Portfolio Value",

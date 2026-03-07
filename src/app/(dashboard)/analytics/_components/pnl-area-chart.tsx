@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { trpc } from "@/lib/trpc/client";
 import { formatStars, formatTon, type Stars, type NanoTon } from "@/lib/currencies";
+import { formatUsd } from "@/lib/formatters";
 import {
   ChartContainer,
   ChartTooltip,
@@ -22,11 +23,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { ChartPeriodSelector, type Range } from "./chart-period-selector";
 
-type Currency = "STARS" | "TON";
+type Currency = "STARS" | "TON" | "USDT";
 
 const CURRENCIES = [
   { value: "TON" as const, label: "TON" },
   { value: "STARS" as const, label: "Stars" },
+  { value: "USDT" as const, label: "USDT" },
 ];
 
 const chartConfig: ChartConfig = {
@@ -38,6 +40,7 @@ const chartConfig: ChartConfig = {
 
 /** Safe formatter: Recharts Y-axis ticks can be floats — Math.round before BigInt */
 function formatTick(v: number, currency: Currency): string {
+  if (currency === "USDT") return formatUsd(v);
   const safe = BigInt(Math.round(v));
   return currency === "TON"
     ? formatTon(safe as NanoTon)
@@ -67,6 +70,7 @@ export function PnlAreaChart(): React.ReactElement {
   }));
 
   const formatValue = (v: number | string): string => {
+    if (currency === "USDT") return formatUsd(Number(v));
     const safe = BigInt(Math.round(Number(v)));
     return currency === "TON"
       ? formatTon(safe as NanoTon)

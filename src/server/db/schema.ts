@@ -21,6 +21,10 @@ import {
 const tradeCurrencies = ["STARS", "TON"] as const;
 export type TradeCurrency = (typeof tradeCurrencies)[number];
 
+// Display currencies include USDT (display-only, not a trade denomination)
+export const displayCurrencies = ["STARS", "TON", "USDT"] as const;
+export type DisplayCurrency = (typeof displayCurrencies)[number];
+
 const marketplaces = ["fragment", "getgems", "tonkeeper", "p2p", "other"] as const;
 export type Marketplace = (typeof marketplaces)[number];
 
@@ -112,7 +116,7 @@ export const userSettings = pgTable("user_settings", {
     .default(0n)
     .notNull(),
   defaultCommissionPermille: smallint("default_commission_permille").default(0).notNull(),
-  defaultCurrency: text("default_currency", { enum: tradeCurrencies }).default("TON").notNull(),
+  defaultCurrency: text("default_currency", { enum: displayCurrencies }).default("TON").notNull(),
   timezone: text().default("UTC").notNull(),
   tonWalletAddress: text("ton_wallet_address"),
   starsToTonRate: numeric("stars_to_ton_rate", { precision: 18, scale: 9 }),

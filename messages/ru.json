@@ -176,6 +176,8 @@
     "starsProfit": "Прибыль Stars",
     "combined": "Общая",
     "combinedRate": "@ {rate} ★/TON",
+    "usdtProfit": "Прибыль USDT",
+    "usdtPartial": "Курс TON недоступен",
     "totalTrades": "Всего сделок",
     "closedCount": "{count} закрыто",
     "portfolioValue": "Стоимость портфеля",

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc/client";
+import { displayCurrencies, type DisplayCurrency } from "@/server/db/schema";
 
 const profileTypes = ["flip", "invest"] as const;
 type ProfileType = (typeof profileTypes)[number];
@@ -44,7 +45,7 @@ export default function SettingsPage(): React.ReactElement {
 
   const [commissionStars, setCommissionStars] = useState("");
   const [commissionPermille, setCommissionPermille] = useState("");
-  const [defaultCurrency, setDefaultCurrency] = useState<"STARS" | "TON">("TON");
+  const [defaultCurrency, setDefaultCurrency] = useState<DisplayCurrency>("TON");
   const [timezone, setTimezone] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
   const [starsToTonRate, setStarsToTonRate] = useState("");
@@ -58,7 +59,7 @@ export default function SettingsPage(): React.ReactElement {
       setCommissionStars(String(settings.defaultCommissionStars));
       setCommissionPermille(String(settings.defaultCommissionPermille));
       const c = settings.defaultCurrency;
-      if (c === "STARS" || c === "TON") setDefaultCurrency(c);
+      if ((displayCurrencies as readonly string[]).includes(c)) setDefaultCurrency(c as DisplayCurrency);
       setTimezone(settings.timezone);
       setWalletAddress(settings.tonWalletAddress ?? "");
       setStarsToTonRate(settings.starsToTonRate ?? "");
@@ -207,7 +208,7 @@ export default function SettingsPage(): React.ReactElement {
           const s = data.settings as Record<string, unknown>;
           const restoredStars = typeof s.defaultCommissionStars === "string" ? s.defaultCommissionStars : commissionStars;
           const restoredPermille = typeof s.defaultCommissionPermille === "number" ? s.defaultCommissionPermille : parseInt(commissionPermille || "0", 10);
-          const restoredCurrency = (s.defaultCurrency === "STARS" || s.defaultCurrency === "TON") ? s.defaultCurrency : defaultCurrency;
+          const restoredCurrency = typeof s.defaultCurrency === "string" && (displayCurrencies as readonly string[]).includes(s.defaultCurrency) ? (s.defaultCurrency as DisplayCurrency) : defaultCurrency;
           const restoredTz = typeof s.timezone === "string" ? s.timezone : timezone;
           const restoredRate = s.starsToTonRate === null ? "" : (typeof s.starsToTonRate === "string" ? s.starsToTonRate : starsToTonRate);
           const restoredLocale = (s.locale === "en" || s.locale === "ru" || s.locale === "zh") ? s.locale : locale;
@@ -336,13 +337,14 @@ export default function SettingsPage(): React.ReactElement {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>{t("defaultCurrency")}</Label>
-            <Select value={defaultCurrency} onValueChange={(v) => { if (v === "STARS" || v === "TON") setDefaultCurrency(v); }}>
+            <Select value={defaultCurrency} onValueChange={(v) => { if ((displayCurrencies as readonly string[]).includes(v)) setDefaultCurrency(v as DisplayCurrency); }}>
               <SelectTrigger aria-label={t("defaultCurrency")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="TON">TON</SelectItem>
                 <SelectItem value="STARS">Stars</SelectItem>
+                <SelectItem value="USDT">USDT</SelectItem>
               </SelectContent>
             </Select>
           </div>

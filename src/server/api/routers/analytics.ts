@@ -26,7 +26,7 @@ export const analyticsRouter = router({
       z.object({
         granularity: granularitySchema,
         range: rangeSchema,
-        currency: z.enum(["STARS", "TON"]).default("STARS"),
+        currency: z.enum(["STARS", "TON", "USDT"]).default("STARS"),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -54,7 +54,10 @@ export const analyticsRouter = router({
         eq(tradeProfits.excludeFromPnl, false),
       ];
 
-      conditions.push(eq(tradeProfits.tradeCurrency, input.currency));
+      // USDT aggregates across both currencies; STARS/TON filter to their own
+      if (input.currency !== "USDT") {
+        conditions.push(eq(tradeProfits.tradeCurrency, input.currency));
+      }
 
       if (days !== null) {
         conditions.push(
@@ -63,14 +66,22 @@ export const analyticsRouter = router({
       }
 
       // Profit column depends on currency filter
-      const profitCol = input.currency === "TON"
-        ? tradeProfits.netProfitNanoton
-        : tradeProfits.netProfitStars;
+      // USDT uses netProfitUsd (numeric) from VIEW; others use bigint columns
+      const isUsdt = input.currency === "USDT";
+      const profitCol = isUsdt
+        ? tradeProfits.netProfitUsd
+        : input.currency === "TON"
+          ? tradeProfits.netProfitNanoton
+          : tradeProfits.netProfitStars;
+
+      const profitAgg = isUsdt
+        ? sql<string>`coalesce(sum(${profitCol}), 0)::numeric`.as("period_profit")
+        : sql<string>`coalesce(sum(${profitCol}), 0)::bigint`.as("period_profit");
 
       const rows = await ctx.db
         .select({
           date: sql<string>`${dateTrunc}`.as("period_date"),
-          profit: sql<string>`coalesce(sum(${profitCol}), 0)::bigint`.as("period_profit"),
+          profit: profitAgg,
           count: sql<number>`count(*)::int`.mapWith(Number),
         })
         .from(tradeProfits)
@@ -78,7 +89,20 @@ export const analyticsRouter = router({
         .groupBy(sql`1`)
         .orderBy(sql`1`);
 
-      // Compute cumulative sum
+      // Compute cumulative sum — float for USDT, bigint for native currencies
+      if (isUsdt) {
+        let cumulative = 0;
+        return rows.map((row) => {
+          cumulative += parseFloat(row.profit);
+          return {
+            date: row.date,
+            profit: row.profit,
+            cumulative: cumulative.toString(),
+            trades: row.count,
+          };
+        });
+      }
+
       let cumulative = 0n;
       return rows.map((row) => {
         cumulative += BigInt(row.profit);

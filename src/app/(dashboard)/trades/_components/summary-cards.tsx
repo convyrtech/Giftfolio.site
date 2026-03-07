@@ -5,11 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc/client";
-import { formatStars, formatTon, nanotonToStars, type Stars, type NanoTon } from "@/lib/currencies";
-import { formatNumber } from "@/lib/formatters";
+import { formatStars, formatTon, nanotonToStars, STARS_USD_RATE, type Stars, type NanoTon } from "@/lib/currencies";
+import { formatNumber, formatUsd } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import { Diamond, Star, TrendingUp, Briefcase, Sigma } from "lucide-react";
+import { Diamond, DollarSign, Star, TrendingUp, Briefcase, Sigma } from "lucide-react";
 
 const periods = ["total", "year", "month", "week", "day"] as const;
 type Period = (typeof periods)[number];
@@ -27,6 +27,7 @@ export function SummaryCards(): React.ReactElement {
     { staleTime: 60 * 60 * 1000 },
   );
   const { data: settings } = trpc.settings.get.useQuery(undefined, { staleTime: 60_000 });
+  const { data: rates } = trpc.market.exchangeRates.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
 
   if (isLoading) return <SummaryCardsSkeleton />;
   if (!data || data.length === 0) return <></>;
@@ -56,6 +57,19 @@ export function SummaryCards(): React.ReactElement {
     combinedStars = starsProfit + tonAsStars;
   }
 
+  // USD PnL: convert both currencies to USD using live rates
+  const starsUsd = starsStat ? Number(starsProfit) * STARS_USD_RATE : null;
+  const tonUsd = tonStat && rates?.tonUsd != null
+    ? Number(tonProfit) / 1e9 * rates.tonUsd
+    : null;
+  const totalUsd = starsUsd != null || tonUsd != null
+    ? (starsUsd ?? 0) + (tonUsd ?? 0)
+    : null;
+  // Mark partial when we have TON trades but no rate
+  const usdIsPartial = tonStat != null && rates?.tonUsd == null;
+
+  const defaultCurrency = settings?.defaultCurrency ?? "TON";
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -73,11 +87,14 @@ export function SummaryCards(): React.ReactElement {
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <ProfitCard
+          key={defaultCurrency}
           tonProfit={tonStat ? tonProfit : null}
           starsProfit={starsStat ? starsProfit : null}
           combinedStars={combinedStars}
           rate={rate ?? null}
-          defaultCurrency={settings?.defaultCurrency ?? "TON"}
+          totalUsd={totalUsd}
+          usdIsPartial={usdIsPartial}
+          defaultCurrency={defaultCurrency}
         />
         <StatCard
           title={t("totalTrades")}
@@ -103,17 +120,21 @@ export function SummaryCards(): React.ReactElement {
   );
 }
 
-type ProfitMode = "stars" | "ton" | "combined";
+type ProfitMode = "stars" | "ton" | "combined" | "usd";
+
+const modeLabel: Record<ProfitMode, string> = { stars: "★", ton: "TON", combined: "Σ", usd: "USDT" };
 
 interface ProfitCardProps {
   tonProfit: bigint | null;
   starsProfit: bigint | null;
   combinedStars: bigint | null;
   rate: string | null;
-  defaultCurrency: "STARS" | "TON";
+  totalUsd: number | null;
+  usdIsPartial: boolean;
+  defaultCurrency: "STARS" | "TON" | "USDT";
 }
 
-function ProfitCard({ tonProfit, starsProfit, combinedStars, rate, defaultCurrency }: ProfitCardProps): React.ReactElement {
+function ProfitCard({ tonProfit, starsProfit, combinedStars, rate, totalUsd, usdIsPartial, defaultCurrency }: ProfitCardProps): React.ReactElement {
   const t = useTranslations("dashboard");
 
   // Determine available modes
@@ -121,9 +142,11 @@ function ProfitCard({ tonProfit, starsProfit, combinedStars, rate, defaultCurren
   if (starsProfit !== null) modes.push("stars");
   if (tonProfit !== null) modes.push("ton");
   if (combinedStars !== null) modes.push("combined");
+  if (totalUsd !== null) modes.push("usd");
 
   // Default to user's preferred currency
-  const preferredMode: ProfitMode = defaultCurrency === "STARS" ? "stars" : "ton";
+  const preferredMode: ProfitMode =
+    defaultCurrency === "STARS" ? "stars" : defaultCurrency === "USDT" ? "usd" : "ton";
   const initialMode = modes.includes(preferredMode) ? preferredMode : modes[0] ?? "stars";
   const [mode, setMode] = useState<ProfitMode>(initialMode);
 
@@ -131,36 +154,56 @@ function ProfitCard({ tonProfit, starsProfit, combinedStars, rate, defaultCurren
   const activeMode = modes.includes(mode) ? mode : modes[0] ?? "stars";
 
   let displayValue: string;
-  let profit: bigint;
+  let isPositive: boolean;
+  let isNegative: boolean;
   let subtitle: string | undefined;
   let icon: React.ReactNode;
   let accentClass: string;
 
-  switch (activeMode) {
-    case "ton":
-      profit = tonProfit ?? 0n;
-      displayValue = formatTon(profit as NanoTon);
-      icon = <Diamond className="h-4 w-4" />;
-      accentClass = "border-ton-accent";
-      break;
-    case "combined":
-      profit = combinedStars ?? 0n;
-      displayValue = formatStars(profit as Stars);
-      subtitle = rate ? t("combinedRate", { rate }) : undefined;
-      icon = <Sigma className="h-4 w-4" />;
-      accentClass = "border-primary/50";
-      break;
-    case "stars":
-    default:
-      profit = starsProfit ?? 0n;
-      displayValue = formatStars(profit as Stars);
-      icon = <Star className="h-4 w-4" />;
-      accentClass = "border-stars-accent";
-      break;
+  if (activeMode === "usd") {
+    const usd = totalUsd ?? 0;
+    displayValue = formatUsd(usd);
+    isPositive = usd > 0;
+    isNegative = usd < 0;
+    icon = <DollarSign className="h-4 w-4" />;
+    accentClass = "border-emerald-500/50";
+    if (usdIsPartial) subtitle = t("usdtPartial");
+  } else {
+    let profit: bigint;
+    switch (activeMode) {
+      case "ton":
+        profit = tonProfit ?? 0n;
+        displayValue = formatTon(profit as NanoTon);
+        icon = <Diamond className="h-4 w-4" />;
+        accentClass = "border-ton-accent";
+        break;
+      case "combined":
+        profit = combinedStars ?? 0n;
+        displayValue = formatStars(profit as Stars);
+        subtitle = rate ? t("combinedRate", { rate }) : undefined;
+        icon = <Sigma className="h-4 w-4" />;
+        accentClass = "border-primary/50";
+        break;
+      case "stars":
+      default:
+        profit = starsProfit ?? 0n;
+        displayValue = formatStars(profit as Stars);
+        icon = <Star className="h-4 w-4" />;
+        accentClass = "border-stars-accent";
+        break;
+    }
+    isPositive = profit > 0n;
+    isNegative = profit < 0n;
   }
 
-  const isPositive = profit > 0n;
-  const isNegative = profit < 0n;
+  const ariaLabel = (m: ProfitMode): string => {
+    switch (m) {
+      case "stars": return t("starsProfit");
+      case "ton": return t("tonProfit");
+      case "combined": return t("combined");
+      case "usd": return t("usdtProfit");
+    }
+  };
 
   return (
     <Card className={cn("border-l-2", accentClass)}>
@@ -176,7 +219,7 @@ function ProfitCard({ tonProfit, starsProfit, combinedStars, rate, defaultCurren
                 <button
                   key={m}
                   onClick={() => setMode(m)}
-                  aria-label={m === "stars" ? t("starsProfit") : m === "ton" ? t("tonProfit") : t("combined")}
+                  aria-label={ariaLabel(m)}
                   aria-pressed={activeMode === m}
                   className={cn(
                     "rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors",
@@ -185,7 +228,7 @@ function ProfitCard({ tonProfit, starsProfit, combinedStars, rate, defaultCurren
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  {m === "stars" ? "★" : m === "ton" ? "TON" : "Σ"}
+                  {modeLabel[m]}
                 </button>
               ))}
             </div>
