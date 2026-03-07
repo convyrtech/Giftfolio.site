@@ -60,6 +60,7 @@
     "sortBuyPrice": "Buy Price",
     "sortSellPrice": "Sell Price",
     "sortCreated": "Created",
+    "sortCustom": "Custom",
     "sortNewest": "Newest",
     "sortOldest": "Oldest",
     "showHidden": "Show hidden trades",

@@ -8,7 +8,7 @@ import { TradesTable } from "./_components/trades-table";
 import { BulkActionsBar } from "./_components/bulk-actions-bar";
 
 type CurrencyFilter = "all" | "STARS" | "TON";
-type SortColumn = "buy_date" | "sell_date" | "buy_price" | "sell_price" | "created_at";
+type SortColumn = "buy_date" | "sell_date" | "buy_price" | "sell_price" | "created_at" | "sort_order";
 type SortDir = "asc" | "desc";
 
 export default function TradesPage(): React.ReactElement {

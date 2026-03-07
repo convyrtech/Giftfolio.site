@@ -16,6 +16,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { GripVertical } from "lucide-react";
 import type { Trade, Marketplace } from "@/server/db/schema";
 import { TradeRowActions } from "./trade-row-actions";
 import { InlineDateCell } from "./inline-date-cell";
@@ -43,6 +44,7 @@ export interface TradesTableMeta {
   onToggleExclude: (trade: Trade) => void;
   onInlineUpdate: (id: bigint, fields: InlineUpdateFields) => Promise<void>;
   floorPrices: Record<string, number>;
+  isCustomSort?: boolean;
 }
 
 // Type-safe module augmentation — removes need for unsafe `as` cast
@@ -55,6 +57,7 @@ declare module "@tanstack/react-table" {
     onToggleExclude: (trade: Trade) => void;
     onInlineUpdate: (id: bigint, fields: InlineUpdateFields) => Promise<void>;
     floorPrices: Record<string, number>;
+    isCustomSort?: boolean;
   }
 }
 
@@ -89,6 +92,18 @@ export function useTradeColumns(): ColumnDef<Trade>[] {
   const tc = useTranslations("common");
 
   return useMemo(() => [
+    {
+      id: "dragHandle",
+      header: () => null,
+      cell: () => (
+        <span aria-hidden="true">
+          <GripVertical className="h-4 w-4 text-muted-foreground/50" />
+        </span>
+      ),
+      enableSorting: false,
+      enableHiding: true,
+      size: 28,
+    } satisfies ColumnDef<Trade>,
     {
       id: "select",
       header: ({ table }) => (

@@ -26,7 +26,7 @@ import { ImportWalletDialog } from "./import-wallet-dialog";
 const currencyFilters = ["all", "STARS", "TON"] as const;
 type CurrencyFilter = (typeof currencyFilters)[number];
 
-const sortColumns = ["buy_date", "sell_date", "buy_price", "sell_price", "created_at"] as const;
+const sortColumns = ["buy_date", "sell_date", "buy_price", "sell_price", "created_at", "sort_order"] as const;
 type SortColumn = (typeof sortColumns)[number];
 
 const sortDirs = ["asc", "desc"] as const;
@@ -107,6 +107,7 @@ export function TradesToolbar({
             <SelectItem value="buy_price">{t("sortBuyPrice")}</SelectItem>
             <SelectItem value="sell_price">{t("sortSellPrice")}</SelectItem>
             <SelectItem value="created_at">{t("sortCreated")}</SelectItem>
+            <SelectItem value="sort_order">{t("sortCustom")}</SelectItem>
           </SelectContent>
         </Select>
 

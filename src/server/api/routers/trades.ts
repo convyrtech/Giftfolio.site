@@ -9,7 +9,7 @@ import { importRowSchema } from "@/lib/csv-import-schema";
 import { importRateLimit } from "@/lib/rate-limit";
 import { importTradesFromWallet } from "@/lib/ton-import";
 
-const sortColumns = ["buy_date", "sell_date", "buy_price", "sell_price", "created_at"] as const;
+const sortColumns = ["buy_date", "sell_date", "buy_price", "sell_price", "created_at", "sort_order"] as const;
 const marketplaceEnum = z.enum(["fragment", "getgems", "tonkeeper", "p2p", "other"]);
 const MAX_EXPORT_ROWS = 10_000;
 const MAX_IMPORT_ROWS = 500;
@@ -83,7 +83,9 @@ export const tradesRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.user.id;
-      const { cursor, limit, sort, sortDir, currency, showDeleted, showHidden } = input;
+      const { cursor, limit, sort, currency, showDeleted, showHidden } = input;
+      // Custom sort always ASC — user-defined order, ignore client sortDir
+      const sortDir = sort === "sort_order" ? "asc" as const : input.sortDir;
 
       const conditions = [eq(trades.userId, userId)];
 
@@ -97,7 +99,7 @@ export const tradesRouter = router({
         conditions.push(eq(trades.tradeCurrency, currency));
       }
 
-      const sortColKey = sort === "buy_date" ? "buyDate" : sort === "sell_date" ? "sellDate" : sort === "buy_price" ? "buyPrice" : sort === "sell_price" ? "sellPrice" : "createdAt";
+      const sortColKey = sort === "buy_date" ? "buyDate" : sort === "sell_date" ? "sellDate" : sort === "buy_price" ? "buyPrice" : sort === "sell_price" ? "sellPrice" : sort === "sort_order" ? "sortOrder" : "createdAt";
       const sortCol = trades[sortColKey];
       const isDateCol = sortColKey === "buyDate" || sortColKey === "sellDate" || sortColKey === "createdAt";
       const isNullableCol = sortColKey === "sellDate" || sortColKey === "sellPrice";
@@ -126,14 +128,13 @@ export const tradesRouter = router({
         }
       }
 
+      const orderExpr = sortDir === "desc" ? sql`${sortExpr} DESC` : sql`${sortExpr} ASC`;
+
       const items = await ctx.db
         .select()
         .from(trades)
         .where(and(...conditions))
-        .orderBy(
-          sortDir === "desc" ? sql`${sortExpr} DESC` : sql`${sortExpr} ASC`,
-          desc(trades.id),
-        )
+        .orderBy(orderExpr, desc(trades.id))
         .limit(limit + 1); // +1 to check if there are more
 
       const hasMore = items.length > limit;
@@ -554,6 +555,43 @@ export const tradesRouter = router({
         .returning({ id: trades.id });
 
       return { count: deleted.length };
+    }),
+
+  reorder: rateLimitedProcedure
+    .input(
+      z.object({
+        // Array of { id, sortOrder } pairs — batch update sort positions
+        items: z.array(z.object({
+          id: z.coerce.bigint(),
+          sortOrder: z.number().int().min(0).max(999999),
+        })).min(1).max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const ids = input.items.map((i) => i.id);
+
+      // Build CASE expression for batch update in a single query
+      const caseParts = sql.join(
+        input.items.map((i) => sql`WHEN ${trades.id} = ${i.id} THEN ${i.sortOrder}`),
+        sql` `,
+      );
+
+      await ctx.db
+        .update(trades)
+        .set({
+          sortOrder: sql`CASE ${caseParts} ELSE ${trades.sortOrder} END`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            inArray(trades.id, ids),
+            eq(trades.userId, userId),
+            isNull(trades.deletedAt),
+          ),
+        );
+
+      return { count: input.items.length };
     }),
 
   toggleHidden: rateLimitedProcedure

@@ -60,6 +60,7 @@
     "sortBuyPrice": "购买价格",
     "sortSellPrice": "出售价格",
     "sortCreated": "创建时间",
+    "sortCustom": "自定义顺序",
     "sortNewest": "最新",
     "sortOldest": "最旧",
     "showHidden": "显示隐藏交易",

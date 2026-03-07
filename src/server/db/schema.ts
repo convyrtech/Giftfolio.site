@@ -4,6 +4,7 @@ import {
   pgView,
   bigint,
   bigserial,
+  integer,
   text,
   smallint,
   boolean,
@@ -177,6 +178,9 @@ export const trades = pgTable(
     // Soft delete
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
 
+    // Custom sort order (0 = not manually sorted)
+    sortOrder: integer("sort_order").default(0).notNull(),
+
     notes: text(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -196,6 +200,10 @@ export const trades = pgTable(
       .where(sql`${table.deletedAt} IS NULL`),
     // Gift slug lookup
     index("idx_trades_gift_slug").on(table.userId, table.giftSlug),
+    // Custom sort order
+    index("idx_trades_sort_order")
+      .on(table.userId, table.sortOrder)
+      .where(sql`${table.deletedAt} IS NULL`),
     check("chk_quantity_range", sql`${table.quantity} >= 1 AND ${table.quantity} <= 9999`),
     check("chk_buy_price_positive", sql`${table.buyPrice} >= 0`),
     check(

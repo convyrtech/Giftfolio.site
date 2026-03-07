@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import {
   useReactTable,
@@ -9,6 +9,23 @@ import {
   type RowSelectionState,
 } from "@tanstack/react-table";
 import { toast } from "sonner";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Table,
   TableBody,
@@ -29,7 +46,7 @@ import { DeleteTradeDialog } from "./delete-trade-dialog";
 
 interface TradesTableProps {
   currency?: "STARS" | "TON";
-  sort?: "buy_date" | "sell_date" | "buy_price" | "sell_price" | "created_at";
+  sort?: "buy_date" | "sell_date" | "buy_price" | "sell_price" | "created_at" | "sort_order";
   sortDir?: "asc" | "desc";
   showHidden?: boolean;
   rowSelection: RowSelectionState;
@@ -50,6 +67,7 @@ export function TradesTable({
   const utils = trpc.useUtils();
   const columns = useTradeColumns();
   const t = useTranslations("trades");
+  const isCustomSort = sort === "sort_order";
 
   // Cap in-memory pages to prevent unbounded growth (50 items × 20 pages = 1,000 trades max)
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
@@ -89,6 +107,16 @@ export function TradesTable({
     onError: (err) => toast.error(err.message),
   });
 
+  const reorderMutation = trpc.trades.reorder.useMutation({
+    onSuccess: () => {
+      void utils.trades.list.invalidate();
+    },
+    onError: (err) => {
+      toast.error(err.message);
+      void utils.trades.list.invalidate();
+    },
+  });
+
   const { data: floorPrices = {} } = trpc.market.floorPrices.useQuery(undefined, {
     staleTime: 60 * 60 * 1000, // 1h — matches server cache TTL
   });
@@ -102,11 +130,42 @@ export function TradesTable({
       await inlineUpdate.mutateAsync({ id, ...fields });
     },
     floorPrices,
+    isCustomSort,
   };
 
   const allTrades = useMemo<Trade[]>(
     () => data?.pages.flatMap((page) => page.data) ?? [],
     [data?.pages],
+  );
+
+  // DnD sensors — pointer with activation constraint to prevent accidental drags
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const rowIds = useMemo(() => allTrades.map((t) => String(t.id)), [allTrades]);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      const oldIndex = allTrades.findIndex((t) => String(t.id) === String(active.id));
+      const newIndex = allTrades.findIndex((t) => String(t.id) === String(over.id));
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const reordered = arrayMove(allTrades, oldIndex, newIndex);
+
+      // Assign new sort orders: index-based, spaced by 10 for future insertions
+      const items = reordered.map((trade, idx) => ({
+        id: trade.id,
+        sortOrder: (idx + 1) * 10,
+      }));
+
+      reorderMutation.mutate({ items });
+    },
+    [allTrades, reorderMutation],
   );
 
   // Hide detail columns on mobile — show only Gift + Profit + Actions
@@ -123,8 +182,9 @@ export function TradesTable({
       sellMarketplace: !isMobile,
       notes: !isMobile,
       unrealizedPnl: !isMobile,
+      dragHandle: isCustomSort && !isMobile,
     }),
-    [isMobile],
+    [isMobile, isCustomSort],
   );
 
   const table = useReactTable({
@@ -172,51 +232,80 @@ export function TradesTable({
     return <EmptyState />;
   }
 
-  return (
-    <div>
-      <div className="rounded-md border">
-        <Table aria-label={t("tradesList")}>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    style={{ width: header.getSize() }}
-                    className="bg-muted/50 text-xs uppercase tracking-wider font-medium text-muted-foreground"
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
+  const tableContent = (
+    <div className="rounded-md border">
+      <Table aria-label={t("tradesList")}>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <TableHead
+                  key={header.id}
+                  style={{ width: header.getSize() }}
+                  className="bg-muted/50 text-xs uppercase tracking-wider font-medium text-muted-foreground"
+                >
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(header.column.columnDef.header, header.getContext())}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows.map((row) => {
+            const trade = row.original;
+            return isCustomSort ? (
+              <SortableTableRow
+                key={row.id}
+                id={row.id}
+                isSelected={row.getIsSelected()}
+                isHidden={trade.isHidden}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </SortableTableRow>
+            ) : (
+              <TableRow
+                key={row.id}
+                data-state={row.getIsSelected() ? "selected" : undefined}
+                className={cn(
+                  "even:bg-muted/30",
+                  row.getIsSelected() && "bg-accent/40",
+                  trade.isHidden && "opacity-50",
+                )}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
                 ))}
               </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.map((row) => {
-              const trade = row.original;
-              return (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() ? "selected" : undefined}
-                  className={cn(
-                    "even:bg-muted/30",
-                    row.getIsSelected() && "bg-accent/40",
-                    trade.isHidden && "opacity-50",
-                  )}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+
+  return (
+    <div>
+      {isCustomSort ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={rowIds} strategy={verticalListSortingStrategy}>
+            {tableContent}
+          </SortableContext>
+        </DndContext>
+      ) : (
+        tableContent
+      )}
 
       {/* Infinite scroll sentinel */}
       <div ref={loadMoreRef} className="h-1" />
@@ -242,6 +331,53 @@ export function TradesTable({
         />
       )}
     </div>
+  );
+}
+
+// Sortable table row wrapper for DnD
+function SortableTableRow({
+  id,
+  isSelected,
+  isHidden,
+  children,
+}: {
+  id: string;
+  isSelected: boolean;
+  isHidden: boolean;
+  children: React.ReactNode;
+}): React.ReactElement {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : undefined,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      data-state={isSelected ? "selected" : undefined}
+      className={cn(
+        "even:bg-muted/30",
+        isSelected && "bg-accent/40",
+        isHidden && "opacity-50",
+        isDragging && "bg-accent/60 shadow-lg",
+      )}
+      {...attributes}
+      {...listeners}
+    >
+      {children}
+    </TableRow>
   );
 }
 
