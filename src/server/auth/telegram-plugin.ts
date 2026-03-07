@@ -4,9 +4,11 @@ import type { BetterAuthPlugin } from "better-auth";
 import { z } from "zod";
 import crypto from "crypto";
 import { env } from "@/env";
+import { eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import { userSettings } from "@/server/db/schema";
 import { authRateLimit } from "@/lib/rate-limit";
+import { locales, type Locale } from "@/i18n/request";
 
 /** Type guard for Better Auth adapter results that have an `id` field. */
 function assertHasId(value: unknown): asserts value is { id: string } {
@@ -116,13 +118,21 @@ export const telegramPlugin = () => {
               userId = newUser.id;
               isNewUser = true;
 
+              // Detect locale from Accept-Language for new users
+              const acceptLang = ctx.request?.headers?.get("accept-language") ?? "";
+              const detectedLocale = acceptLang.split(",")
+                .map(p => p.split(";")[0]?.trim().split("-")[0]?.toLowerCase())
+                .find((l): l is Locale => !!l && (locales as readonly string[]).includes(l))
+                ?? "en";
+
               // Create default user settings via direct Drizzle (not BA adapter)
               await db.insert(userSettings).values({
                 userId,
                 defaultCommissionStars: 0n,
                 defaultCommissionPermille: 0,
-                defaultCurrency: "STARS",
+                defaultCurrency: "TON",
                 timezone: body.timezone ?? "UTC",
+                locale: detectedLocale,
               }).onConflictDoNothing();
             } catch {
               // Race condition: another request created the user first (unique constraint)
@@ -165,6 +175,19 @@ export const telegramPlugin = () => {
             session,
             user: user as { id: string; name: string; email: string; emailVerified: boolean; createdAt: Date; updatedAt: Date; image: string | null },
           });
+
+          // Set locale cookie from user's saved settings so next-intl picks it up immediately
+          const [settings] = await db.select({ locale: userSettings.locale })
+            .from(userSettings)
+            .where(eq(userSettings.userId, userId))
+            .limit(1);
+          if (settings?.locale) {
+            const isSecure = env.NEXT_PUBLIC_APP_URL.startsWith("https");
+            ctx.setHeader(
+              "Set-Cookie",
+              `locale=${settings.locale};Path=/;Max-Age=${365 * 24 * 60 * 60};SameSite=Lax${isSecure ? ";Secure" : ""}`,
+            );
+          }
 
           return ctx.json({
             success: true,
