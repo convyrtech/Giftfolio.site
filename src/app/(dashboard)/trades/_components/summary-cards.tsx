@@ -77,6 +77,7 @@ export function SummaryCards(): React.ReactElement {
           starsProfit={starsStat ? starsProfit : null}
           combinedStars={combinedStars}
           rate={rate ?? null}
+          defaultCurrency={settings?.defaultCurrency ?? "TON"}
         />
         <StatCard
           title={t("totalTrades")}
@@ -109,9 +110,10 @@ interface ProfitCardProps {
   starsProfit: bigint | null;
   combinedStars: bigint | null;
   rate: string | null;
+  defaultCurrency: "STARS" | "TON";
 }
 
-function ProfitCard({ tonProfit, starsProfit, combinedStars, rate }: ProfitCardProps): React.ReactElement {
+function ProfitCard({ tonProfit, starsProfit, combinedStars, rate, defaultCurrency }: ProfitCardProps): React.ReactElement {
   const t = useTranslations("dashboard");
 
   // Determine available modes
@@ -120,7 +122,10 @@ function ProfitCard({ tonProfit, starsProfit, combinedStars, rate }: ProfitCardP
   if (tonProfit !== null) modes.push("ton");
   if (combinedStars !== null) modes.push("combined");
 
-  const [mode, setMode] = useState<ProfitMode>(modes[0] ?? "stars");
+  // Default to user's preferred currency
+  const preferredMode: ProfitMode = defaultCurrency === "STARS" ? "stars" : "ton";
+  const initialMode = modes.includes(preferredMode) ? preferredMode : modes[0] ?? "stars";
+  const [mode, setMode] = useState<ProfitMode>(initialMode);
 
   // If current mode becomes unavailable (e.g. period changes), fall back
   const activeMode = modes.includes(mode) ? mode : modes[0] ?? "stars";

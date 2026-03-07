@@ -133,10 +133,16 @@ export function TradesTable({
     isCustomSort,
   };
 
-  const allTrades = useMemo<Trade[]>(
+  const serverTrades = useMemo<Trade[]>(
     () => data?.pages.flatMap((page) => page.data) ?? [],
     [data?.pages],
   );
+
+  // Optimistic reorder: stores reordered trades + the data.pages ref they were based on.
+  // When server data changes (invalidation after mutation), the key won't match
+  // and we fall back to serverTrades. No ref, no useEffect — pure derivation.
+  const [optimistic, setOptimistic] = useState<{ trades: Trade[]; pagesKey: unknown } | null>(null);
+  const allTrades = optimistic !== null && optimistic.pagesKey === data?.pages ? optimistic.trades : serverTrades;
 
   // DnD sensors — pointer with activation constraint to prevent accidental drags
   const sensors = useSensors(
@@ -157,6 +163,9 @@ export function TradesTable({
 
       const reordered = arrayMove(allTrades, oldIndex, newIndex);
 
+      // Optimistically update UI immediately (keyed to current server data)
+      setOptimistic({ trades: reordered, pagesKey: data?.pages });
+
       // Assign new sort orders: index-based, spaced by 10 for future insertions
       const items = reordered.map((trade, idx) => ({
         id: trade.id,
@@ -165,7 +174,7 @@ export function TradesTable({
 
       reorderMutation.mutate({ items });
     },
-    [allTrades, reorderMutation],
+    [allTrades, reorderMutation, data?.pages],
   );
 
   // Hide detail columns on mobile — show only Gift + Profit + Actions
