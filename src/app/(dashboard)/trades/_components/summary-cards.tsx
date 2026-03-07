@@ -71,38 +71,13 @@ export function SummaryCards(): React.ReactElement {
         </Tabs>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {tonStat && (
-          <StatCard
-            title={t("tonProfit")}
-            value={formatTon(tonProfit as NanoTon)}
-            isPositive={tonProfit > 0n}
-            isNegative={tonProfit < 0n}
-            icon={<Diamond className="h-4 w-4" />}
-            accentClass="border-ton-accent"
-          />
-        )}
-        {starsStat && (
-          <StatCard
-            title={t("starsProfit")}
-            value={formatStars(starsProfit as Stars)}
-            isPositive={starsProfit > 0n}
-            isNegative={starsProfit < 0n}
-            icon={<Star className="h-4 w-4" />}
-            accentClass="border-stars-accent"
-          />
-        )}
-        {combinedStars !== null && (
-          <StatCard
-            title={t("combined")}
-            value={formatStars(combinedStars as Stars)}
-            subtitle={t("combinedRate", { rate: rate! })}
-            isPositive={combinedStars > 0n}
-            isNegative={combinedStars < 0n}
-            icon={<Sigma className="h-4 w-4" />}
-            accentClass="border-primary/50"
-          />
-        )}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <ProfitCard
+          tonProfit={tonStat ? tonProfit : null}
+          starsProfit={starsStat ? starsProfit : null}
+          combinedStars={combinedStars}
+          rate={rate ?? null}
+        />
         <StatCard
           title={t("totalTrades")}
           value={formatNumber(totalTrades)}
@@ -124,6 +99,109 @@ export function SummaryCards(): React.ReactElement {
         />
       </div>
     </div>
+  );
+}
+
+type ProfitMode = "stars" | "ton" | "combined";
+
+interface ProfitCardProps {
+  tonProfit: bigint | null;
+  starsProfit: bigint | null;
+  combinedStars: bigint | null;
+  rate: string | null;
+}
+
+function ProfitCard({ tonProfit, starsProfit, combinedStars, rate }: ProfitCardProps): React.ReactElement {
+  const t = useTranslations("dashboard");
+
+  // Determine available modes
+  const modes: ProfitMode[] = [];
+  if (starsProfit !== null) modes.push("stars");
+  if (tonProfit !== null) modes.push("ton");
+  if (combinedStars !== null) modes.push("combined");
+
+  const [mode, setMode] = useState<ProfitMode>(modes[0] ?? "stars");
+
+  // If current mode becomes unavailable (e.g. period changes), fall back
+  const activeMode = modes.includes(mode) ? mode : modes[0] ?? "stars";
+
+  let displayValue: string;
+  let profit: bigint;
+  let subtitle: string | undefined;
+  let icon: React.ReactNode;
+  let accentClass: string;
+
+  switch (activeMode) {
+    case "ton":
+      profit = tonProfit ?? 0n;
+      displayValue = formatTon(profit as NanoTon);
+      icon = <Diamond className="h-4 w-4" />;
+      accentClass = "border-ton-accent";
+      break;
+    case "combined":
+      profit = combinedStars ?? 0n;
+      displayValue = formatStars(profit as Stars);
+      subtitle = rate ? t("combinedRate", { rate }) : undefined;
+      icon = <Sigma className="h-4 w-4" />;
+      accentClass = "border-primary/50";
+      break;
+    case "stars":
+    default:
+      profit = starsProfit ?? 0n;
+      displayValue = formatStars(profit as Stars);
+      icon = <Star className="h-4 w-4" />;
+      accentClass = "border-stars-accent";
+      break;
+  }
+
+  const isPositive = profit > 0n;
+  const isNegative = profit < 0n;
+
+  return (
+    <Card className={cn("border-l-2", accentClass)}>
+      <CardHeader className="pb-1">
+        <CardTitle className="flex items-center justify-between">
+          <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            {icon}
+            {t("profit")}
+          </span>
+          {modes.length > 1 && (
+            <div className="flex gap-0.5 rounded-md bg-muted p-0.5">
+              {modes.map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  aria-label={m === "stars" ? t("starsProfit") : m === "ton" ? t("tonProfit") : t("combined")}
+                  aria-pressed={activeMode === m}
+                  className={cn(
+                    "rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors",
+                    activeMode === m
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {m === "stars" ? "★" : m === "ton" ? "TON" : "Σ"}
+                </button>
+              ))}
+            </div>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div
+          className={cn(
+            "text-2xl font-bold tabular-nums",
+            isPositive && "text-profit",
+            isNegative && "text-loss",
+          )}
+        >
+          {isPositive ? "+" : ""}{displayValue}
+        </div>
+        {subtitle && (
+          <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -169,8 +247,8 @@ function SummaryCardsSkeleton(): React.ReactElement {
   return (
     <div className="space-y-3" role="status" aria-label={t("loadingStats")}>
       <Skeleton className="h-5 w-24" />
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
           <Card key={i} className="border-l-2 border-muted">
             <CardHeader className="pb-1">
               <Skeleton className="h-3 w-20" />

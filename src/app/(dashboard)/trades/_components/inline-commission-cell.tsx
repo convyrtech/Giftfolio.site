@@ -20,6 +20,12 @@ interface InlineCommissionCellProps {
   onSave: (fields: { commissionFlatStars?: bigint; commissionPermille?: number }) => Promise<void>;
 }
 
+function hasCommissionValue(flat: bigint | null, permille: number | null, currency: "STARS" | "TON"): boolean {
+  if (flat !== null && flat > 0n && currency === "STARS") return true;
+  if (permille !== null && permille > 0) return true;
+  return false;
+}
+
 function formatCommission(flat: bigint | null, permille: number | null, currency: "STARS" | "TON"): string {
   const parts: string[] = [];
   if (flat !== null && flat > 0n && currency === "STARS") {
@@ -56,7 +62,15 @@ export function InlineCommissionCell({
     setSaving(true);
     try {
       const fields: { commissionFlatStars?: bigint; commissionPermille?: number } = {};
-      const parsedFlat = flatInput.trim() === "" ? 0n : BigInt(flatInput.trim());
+
+      let parsedFlat: bigint;
+      try {
+        parsedFlat = flatInput.trim() === "" ? 0n : BigInt(flatInput.trim());
+      } catch {
+        toast.error(t("flatNonNegative"));
+        return;
+      }
+
       const parsedPermille = permilleInput.trim() === "" ? 0 : Number(permilleInput.trim());
 
       if (isNaN(parsedPermille) || parsedPermille < 0 || parsedPermille > 1000) {
@@ -90,7 +104,10 @@ export function InlineCommissionCell({
           disabled={saving}
           aria-label={t("commissionOverride")}
         >
-          <span className="tabular-nums text-muted-foreground">
+          <span className={cn(
+            "text-muted-foreground",
+            hasCommissionValue(flatStars, permille, currency) && "tabular-nums",
+          )}>
             {formatCommission(flatStars, permille, currency)}
           </span>
         </button>

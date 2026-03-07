@@ -14,10 +14,11 @@ import {
 } from "@/lib/currencies";
 
 interface InlinePriceCellProps {
-  value: bigint;
+  value: bigint | null;
   currency: "STARS" | "TON";
   onSave: (price: bigint) => Promise<void>;
   align?: "left" | "right";
+  placeholder?: string;
 }
 
 function toEditString(value: bigint, currency: "STARS" | "TON"): string {
@@ -40,6 +41,7 @@ export function InlinePriceCell({
   currency,
   onSave,
   align = "right",
+  placeholder = "—",
 }: InlinePriceCellProps): React.ReactElement {
   const [editing, setEditing] = useState(false);
   const [inputVal, setInputVal] = useState("");
@@ -57,7 +59,7 @@ export function InlinePriceCell({
   }, [editing]);
 
   function startEdit() {
-    setInputVal(toEditString(value, currency));
+    setInputVal(value !== null ? toEditString(value, currency) : "");
     setHasError(false);
     setEditing(true);
   }
@@ -65,6 +67,13 @@ export function InlinePriceCell({
   async function commit() {
     if (!editing || committingRef.current) return;
     committingRef.current = true;
+
+    // If input is empty and value was null, just cancel (no change)
+    if (inputVal.trim() === "" && value === null) {
+      setEditing(false);
+      committingRef.current = false;
+      return;
+    }
 
     let parsed: bigint;
     try {
@@ -131,17 +140,19 @@ export function InlinePriceCell({
       onClick={startEdit}
       disabled={saving}
       className={cn(
-        "group flex w-full items-center gap-1 rounded px-1 py-0.5 tabular-nums text-sm transition-colors",
+        "group flex w-full items-center gap-1 rounded px-1 py-0.5 text-sm transition-colors",
+        value !== null && "tabular-nums",
         align === "right" && "justify-end",
         "hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         saving && "opacity-50",
+        value === null && "text-muted-foreground",
       )}
-      aria-label={`Edit price: ${formatDisplay(value, currency)}`}
+      aria-label={value !== null ? `Edit price: ${formatDisplay(value, currency)}` : "Set price"}
     >
       {saving && (
         <span className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />
       )}
-      {formatDisplay(value, currency)}
+      {value !== null ? formatDisplay(value, currency) : placeholder}
     </button>
   );
 }

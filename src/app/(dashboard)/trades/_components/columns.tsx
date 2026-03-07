@@ -224,20 +224,15 @@ export function useTradeColumns(): ColumnDef<Trade>[] {
     {
       accessorKey: "sellDate",
       header: t("columnSold"),
-      cell: ({ row, table }) => {
-        if (row.original.sellDate === null) {
-          return <span className="block text-sm text-muted-foreground">—</span>;
-        }
-        return (
-          <InlineDateCell
-            value={row.original.sellDate}
-            minDate={row.original.buyDate}
-            onSave={(date) =>
-              table.options.meta!.onInlineUpdate(row.original.id, { sellDate: date })
-            }
-          />
-        );
-      },
+      cell: ({ row, table }) => (
+        <InlineDateCell
+          value={row.original.sellDate}
+          minDate={row.original.buyDate}
+          onSave={(date) =>
+            table.options.meta!.onInlineUpdate(row.original.id, { sellDate: date })
+          }
+        />
+      ),
       size: 100,
     },
     {
@@ -257,22 +252,20 @@ export function useTradeColumns(): ColumnDef<Trade>[] {
     {
       accessorKey: "sellPrice",
       header: () => <span className="block text-right">{t("columnSellPrice")}</span>,
-      cell: ({ row, table }) => {
-        if (row.original.sellPrice === null) {
-          return (
-            <span className="block text-right text-sm text-muted-foreground">—</span>
-          );
-        }
-        return (
-          <InlinePriceCell
-            value={row.original.sellPrice}
-            currency={row.original.tradeCurrency}
-            onSave={(price) =>
-              table.options.meta!.onInlineUpdate(row.original.id, { sellPrice: price })
+      cell: ({ row, table }) => (
+        <InlinePriceCell
+          value={row.original.sellPrice}
+          currency={row.original.tradeCurrency}
+          onSave={(price) => {
+            const fields: InlineUpdateFields = { sellPrice: price };
+            if (row.original.sellDate === null) {
+              const now = new Date();
+              fields.sellDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
             }
-          />
-        );
-      },
+            return table.options.meta!.onInlineUpdate(row.original.id, fields);
+          }}
+        />
+      ),
       size: 120,
     },
     {
